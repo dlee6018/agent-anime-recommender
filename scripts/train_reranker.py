@@ -48,6 +48,8 @@ ap.add_argument("--holdout", choices=["symmetric", "src_only"],
                      "protocol the booster will serve")
 ap.add_argument("--pairs_file", default="rec_pairs.parquet",
                 help="full rec graph used for labels + holdout filtering")
+ap.add_argument("--content", default="content_emb_qwen.npz",
+                help="content embedding file for fold-tower features")
 args = ap.parse_args()
 
 DATA = ROOT / "data"
@@ -56,7 +58,7 @@ TOP_CAND = args.top_cand
 MAXRANK_RETRIEVE = args.maxrank
 
 meta = load_metadata()
-ids, X, _ = build_features("content_emb_qwen.npz")
+ids, X, _ = build_features(args.content)
 fb = FeatureBuilder(ids)
 idx = fb.idx
 pop = np.array([(meta.get(int(a), {}).get("popularity") or 99999)
