@@ -86,14 +86,24 @@ import torch  # noqa: E402
 
 Xt = torch.tensor(X, device="cuda")
 query_emb = tt.encode_items(tower, Xt, side="q") if args.asym else None
-np.savez(ROOT / "data" / "two_tower_emb.npz", ids=ids, emb=cand_emb,
-         **({"query_emb": query_emb} if query_emb is not None else {}))
-torch.save(tower.state_dict(), ROOT / "data" / "two_tower.pt")
+extra = {"query_emb": query_emb} if query_emb is not None else {}
+np.savez(ROOT / "data" / f"tt_{args.name}.npz", ids=ids, emb=cand_emb, **extra)
 
 fn = make_fn(cand_emb, query_emb)
 dev = evaluate(fn, dev_set)
 print(f"\nFINAL dev P@5={dev['precision_at_k']:.3f} mrr={dev['mrr']:.3f}")
 run.log({"dev/p5_final": dev["precision_at_k"]})
+
+# promote to canonical two_tower_emb.npz only on dev improvement
+best_file = ROOT / "data" / "tt_best.json"
+best = json.load(open(best_file)) if best_file.exists() else {"dev_p5": 0}
+if dev["precision_at_k"] > best["dev_p5"]:
+    np.savez(ROOT / "data" / "two_tower_emb.npz", ids=ids, emb=cand_emb,
+             **extra)
+    torch.save(tower.state_dict(), ROOT / "data" / "two_tower.pt")
+    json.dump({"dev_p5": dev["precision_at_k"], "name": args.name,
+               "config": vars(args)}, open(best_file, "w"))
+    print(f"PROMOTED {args.name} to champion", flush=True)
 if not args.no_eval:
     ev = evaluate(fn, load_eval_set())
     print(f"FINAL eval P@5={ev['precision_at_k']:.3f} "

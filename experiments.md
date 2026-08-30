@@ -16,8 +16,24 @@ W&B project: `anime-rec`.
 | 6b | 08-30 | tt-v1 + inference tuning | candidate mask pop≤700 + pop_w 0.15 | 0.348 | — | — | — | +0.09 free; truth is popularity-skewed |
 | 7 | 08-30 | co-occurrence lift | co(a,b)/(cnt^α), α=0.65, mask 1500 | 0.231 | — | — | — | independent signal → reranker feature |
 | 8 | 08-30 | tt-v2 vote-sampling | pairs sampled ∝ log1p(votes) | 0.328 | — | — | — | worse than loss-weighting |
+| 9 | 08-30 | tt-v2 hard negatives | 256 shared negs from top-700 pool | 0.208 | — | — | — | ✗ false negatives (lists only cover top~20) |
+| 10 | 08-30 | tt-v2 asym heads | separate q/c heads | 0.239 | — | — | — | ✗ relation ~symmetric |
+| 11 | 08-30 | neighbor-transfer | blend-space NN=60 β=4, vote transfer | 0.168 | — | — | — | weak alone (holdout caps reach at ~51%); keep as ensemble feature |
+| 12 | 08-30 | tt-v3 arch sweep | temp {.02,.05,.10}, deep 1024→384, drop .3 | ≤0.343 | — | — | — | arch is not the bottleneck |
+| 13 | 08-30 | tt-v4 enriched features | + themes/demographics multi-hot, enriched docs re-embedded (lyfesan merge), pairs re-resolved 50k→52.7k | 0.383 | — | — | — | features are the lever (+0.035) |
+| 14 | 08-30 | tt-v4b early stop | best-epoch snapshot (peak ~ep4-10) | 0.393 | — | — | — | champion; model overfits after ~ep10 |
 
 ## Notes
+
+### Structural findings (2026-08-30)
+- Truth is popularity-skewed: candidate mask pop≤700 + pop prior ≈ +0.09 P@5.
+- 45% of eval truth items are themselves eval-set members → the rec graph
+  among the top-100 is fully hidden; only feature-based models can bridge.
+- 20/100 eval queries are sequels; their truth ≈ base-entry truth +
+  season-parity matches (BNHA S2 → AnsatsuKyoushitsu S2).
+- Eval-truth coverage of feature universe: 99% (9 post-2023 ids missing).
+- Two pair files: train_pairs.parquet (eval+dev holdout, for dev iteration),
+  train_pairs_eval.parquet (eval holdout only, for milestone eval reads).
 
 ### Exp 1–5 (baselines)
 Unsupervised similarity ≠ MAL rec lists: co-watch (ALS) surfaces "watched

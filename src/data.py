@@ -1,9 +1,9 @@
-"""Shared data loading: metadata, titles, id mapping, feature helpers."""
-import csv
-import json
+"""Shared data loading: enriched metadata, titles, id mapping."""
 import unicodedata
 from functools import lru_cache
 from pathlib import Path
+
+import pandas as pd
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 
@@ -13,28 +13,36 @@ def norm_title(s: str) -> str:
     return " ".join(s.split())
 
 
+def _split(s) -> list[str]:
+    if not s or not isinstance(s, str):
+        return []
+    return [x.strip() for x in s.split(",") if x.strip()]
+
+
 @lru_cache(maxsize=1)
 def load_metadata() -> dict[int, dict]:
-    """mal_id -> {name, english, genres:list, studios:list, synopsis, type,
-    score, members-ish popularity fields} from the 2023 dump."""
+    """mal_id -> dict. Merged 2023 dump (synopses) + 2025 lyfesan dump
+    (themes/demographics/producers, fresh popularity & members)."""
+    df = pd.read_parquet(DATA / "meta_enriched.parquet")
     meta = {}
-    for r in csv.DictReader(open(DATA / "raw" / "anime_metadata_2023.csv")):
-        aid = int(r["anime_id"])
-        meta[aid] = {
-            "name": r["Name"],
-            "english": r["English name"] if r["English name"] != "UNKNOWN" else None,
-            "genres": [g.strip() for g in r["Genres"].split(",") if g.strip() and g.strip() != "UNKNOWN"],
-            "studios": [s.strip() for s in r["Studios"].split(",") if s.strip() and s.strip() != "UNKNOWN"],
-            "synopsis": r["Synopsis"],
-            "type": r["Type"],
-            "source": r["Source"],
-            "rating": r["Rating"],
-            "score": float(r["Score"]) if r["Score"] not in ("", "UNKNOWN") else None,
-            "rank": int(float(r["Rank"])) if r["Rank"] not in ("", "UNKNOWN") else None,
-            "popularity": int(float(r["Popularity"])) if r["Popularity"] not in ("", "UNKNOWN") else None,
-            "favorites": int(float(r["Favorites"])) if r["Favorites"] not in ("", "UNKNOWN") else 0,
-            "aired": r["Aired"],
-            "premiered": r["Premiered"],
+    for r in df.itertuples():
+        meta[int(r.mal_id)] = {
+            "name": r.name,
+            "english": r.english if isinstance(r.english, str) else None,
+            "synonyms": _split(r.synonyms),
+            "genres": _split(r.genres),
+            "themes": _split(r.themes),
+            "demographics": _split(r.demographics),
+            "studios": _split(r.studios),
+            "producers": _split(r.producers),
+            "type": r.type,
+            "source": r.source,
+            "rating": r.rating,
+            "score": None if pd.isna(r.score) else float(r.score),
+            "members": int(r.members),
+            "popularity": None if pd.isna(r.popularity) else int(r.popularity),
+            "year": None if pd.isna(r.year) else int(r.year),
+            "synopsis": r.synopsis or "",
         }
     return meta
 
@@ -46,11 +54,14 @@ def titles() -> dict[int, str]:
 
 @lru_cache(maxsize=1)
 def title_to_id() -> dict[str, int]:
-    """normalized title (romaji + english) -> mal_id; first (most popular dump
-    order) wins on collision."""
+    """normalized title (romaji/english/synonyms) -> mal_id; most popular
+    wins on collision."""
     t2i = {}
-    for aid, m in load_metadata().items():
-        for t in (m["name"], m["english"]):
+    meta = load_metadata()
+    order = sorted(meta, key=lambda a: meta[a]["popularity"] or 10**9)
+    for aid in order:
+        m = meta[aid]
+        for t in [m["name"], m["english"], *m["synonyms"]]:
             if t:
                 t2i.setdefault(norm_title(t), aid)
     return t2i
@@ -71,10 +82,4 @@ def resolve_title(query: str) -> int | None:
 
 def year_of(aid: int) -> int | None:
     m = load_metadata().get(aid)
-    if not m:
-        return None
-    a = m["aired"]
-    for tok in a.replace(",", " ").split():
-        if tok.isdigit() and len(tok) == 4:
-            return int(tok)
-    return None
+    return m["year"] if m else None

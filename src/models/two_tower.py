@@ -68,6 +68,7 @@ def train_two_tower(ids: np.ndarray, X: np.ndarray, pairs: pd.DataFrame,
 
     n = len(src)
     prob = w / w.sum() if sample_by_votes else None
+    best_p5, best_emb, best_state = -1.0, None, None
     for ep in range(epochs):
         order = (np.random.choice(n, size=n, p=prob) if sample_by_votes
                  else np.random.permutation(n))
@@ -104,10 +105,18 @@ def train_two_tower(ids: np.ndarray, X: np.ndarray, pairs: pd.DataFrame,
             tot += loss.item()
             nb += 1
         sched.step()
-        if log_fn and (ep % 5 == 4 or ep == epochs - 1):
-            dev_p5 = (dev_eval_fn(encode_items(tower, Xt, side="c"))
-                      if dev_eval_fn else None)
-            log_fn(ep, tot / max(nb, 1), dev_p5)
+        if dev_eval_fn and (ep % 2 == 1 or ep == epochs - 1):
+            emb = encode_items(tower, Xt, side="c")
+            dev_p5 = dev_eval_fn(emb)
+            if dev_p5 > best_p5:
+                best_p5, best_emb = dev_p5, emb
+                best_state = {k: v.detach().clone()
+                              for k, v in tower.state_dict().items()}
+            if log_fn:
+                log_fn(ep, tot / max(nb, 1), dev_p5)
+    if best_state is not None:
+        tower.load_state_dict(best_state)
+        return tower, best_emb
     return tower, encode_items(tower, Xt, side="c")
 
 

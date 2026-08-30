@@ -13,13 +13,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.data import load_metadata, year_of  # noqa: E402
 
 MODEL = "BAAI/bge-large-en-v1.5"
-MAX_POP_RANK = 12000
+MAX_POP_RANK = 13000
 
 meta = load_metadata()
 ids = sorted(
     a for a, m in meta.items()
-    if m["synopsis"] and len(m["synopsis"]) > 40
-    and m["popularity"] and m["popularity"] <= MAX_POP_RANK
+    if (m["popularity"] and m["popularity"] <= MAX_POP_RANK)
+    and (len(m["synopsis"] or "") > 40 or m["genres"] or m["themes"])
 )
 print(f"embedding {len(ids)} anime with {MODEL}", flush=True)
 
@@ -33,6 +33,10 @@ for a in ids:
     parts.append(f"({m['type']}, {y or 'unknown year'})")
     if m["genres"]:
         parts.append("Genres: " + ", ".join(m["genres"]))
+    if m["themes"]:
+        parts.append("Themes: " + ", ".join(m["themes"]))
+    if m["demographics"]:
+        parts.append("Demographic: " + ", ".join(m["demographics"]))
     if m["studios"]:
         parts.append("Studio: " + ", ".join(m["studios"]))
     parts.append((m["synopsis"] or "").replace("\n", " ")[:1500])

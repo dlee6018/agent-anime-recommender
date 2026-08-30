@@ -38,12 +38,18 @@ todo = [i for i in sorted(ids) if str(i) not in done]
 print(f"universe {len(ids)}, todo {len(todo)}", flush=True)
 
 
-def get(url, tries=5):
+UA = {"User-Agent": "anime-rec-research/0.1"}
+
+
+def get(url, tries=3):
     for t in range(tries):
         try:
-            return json.load(urllib.request.urlopen(url, timeout=25))
-        except Exception:
-            time.sleep(4 + 4 * t)
+            req = urllib.request.Request(url, headers=UA)
+            return json.load(urllib.request.urlopen(req, timeout=12))
+        except Exception as e:
+            if t == tries - 1:
+                print(f"giving up {url}: {type(e).__name__} {e}", flush=True)
+            time.sleep(2 + 2 * t)
     return None
 
 
@@ -77,9 +83,11 @@ for n, aid in enumerate(todo):
         }
     else:
         done[str(aid)] = None
-    if n % 50 == 49 or n == len(todo) - 1:
+    if n % 25 == 24 or n == len(todo) - 1:
         json.dump(done, open(OUT, "w"))
-        print(f"[{n + 1}/{len(todo)}]", flush=True)
+    if n % 10 == 9:
+        ok = sum(1 for v in done.values() if v)
+        print(f"[{n + 1}/{len(todo)}] ok={ok}", flush=True)
     time.sleep(1.05)
 
 json.dump(done, open(OUT, "w"))
