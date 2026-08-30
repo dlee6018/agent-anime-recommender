@@ -113,10 +113,15 @@ for f in range(N_FOLDS) if not args.lgbm_only else []:
         cands = [int(ids[i]) for i in top]
         if args.union_extra:
             seen = set(cands)
-            for extra in (fb.cooc_top(s_id, args.union_extra, retrieve_mask),
+            in_nbrs = [x for x, _ in sorted(fb.in_lists.get(s_id, ()),
+                                            key=lambda t: -t[1])
+                       [:args.union_extra]]
+            for extra in (in_nbrs,
+                          fb.cooc_top(s_id, args.union_extra, retrieve_mask),
                           fb.content_top(s_id, args.union_extra,
                                          retrieve_mask)):
-                cands.extend(c for c in extra if c not in seen)
+                cands.extend(c for c in extra
+                             if c not in seen and c in idx)
                 seen.update(extra)
         Xrows.append(fb.rows(s_id, cands, tq, emb))
         ylab.append([3 if c in top3 else 2 if c in top10

@@ -12,7 +12,8 @@ DATA = Path(__file__).resolve().parent.parent.parent / "data"
 FEATS = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
          "genre_jac", "year_gap", "cand_logpop", "src_logpop", "type_match",
          "cand_season", "src_season", "studio_match", "cand_score",
-         "transfer_in", "nbr_out", "cand_has_graph", "cand_age"]
+         "transfer_in", "nbr_out", "cand_has_graph", "cand_age",
+         "rev_edge", "colist"]
 
 SEASON_RE = re.compile(
     r"(?:(\d)(?:nd|rd|th) season|season (\d)|part (\d)|\b(ii|iii|iv)\b)", re.I)
@@ -125,6 +126,10 @@ class FeatureBuilder:
         sg, st = set(ms["genres"]), set(ms["studios"])
         sy = year_of(s_id) or 2005
         ssea = self.season_idx(s_id)
+        # under src_only holdout the query's IN-edges are visible:
+        # rev_edge = weight of (cand -> query); colist = query & cand
+        # co-occurring in third-party lists. Both are 0 under symmetric.
+        q_in = {s: w for s, w in self.in_lists.get(s_id, ())}
         out = []
         for c_id in cands:
             ci = self.idx[int(c_id)]
@@ -139,6 +144,14 @@ class FeatureBuilder:
             tin, nout = self.graph_feats(int(c_id), tt_q, tt_emb)
             has_graph = float(int(c_id) in self.in_lists
                               or int(c_id) in self.out_lists)
+            rev = q_in.get(int(c_id), 0.0)
+            colist = 0.0
+            if q_in:
+                for s, w_sq in q_in.items():
+                    for d, w_sc in self.out_lists.get(s, ()):
+                        if d == int(c_id):
+                            colist += w_sq * w_sc
+                            break
             out.append([
                 float(tt_q @ tt_emb[ci]),
                 float(self.CEMB[si] @ self.CEMB[ci]),
@@ -154,6 +167,7 @@ class FeatureBuilder:
                 mc["score"] or 6.5,
                 tin, nout,
                 has_graph, float(2026 - (year_of(int(c_id)) or 2005)),
+                rev, colist,
             ])
         return np.array(out, dtype=np.float32)
 
@@ -185,9 +199,13 @@ def make_rerank_recommender(ids: np.ndarray, tt_emb: np.ndarray,
             s_dom = min(query_ids, key=lambda q: meta.get(q, {})
                         .get("popularity") or 10**9)
             seen = set(cands)
-            for extra in (fb.cooc_top(s_dom, union_extra, rmask),
+            in_nbrs = [s for s, _ in sorted(fb.in_lists.get(s_dom, ()),
+                                            key=lambda x: -x[1])[:union_extra]]
+            for extra in (in_nbrs,
+                          fb.cooc_top(s_dom, union_extra, rmask),
                           fb.content_top(s_dom, union_extra, rmask)):
-                cands.extend(c for c in extra if c not in seen)
+                cands.extend(c for c in extra
+                             if c not in seen and c in fb.idx)
                 seen.update(extra)
         # featurize vs the most popular query anime (multi-query: mean would
         # need per-query rows; use the dominant query as src context)
