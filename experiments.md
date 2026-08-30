@@ -33,6 +33,8 @@ W&B project: `anime-rec`.
 | 23 | 08-30 | ens reranker | 3 seeds/fold (15 towers), ens retrieval + graph feats | 0.515 | — | — | — | champion |
 | 24 | 08-30 | + has_graph/cand_age | indicator for eval-member zero-graph bias | 0.508 | — | — | — | dev-neutral; A/B at next milestone |
 | M1 | 08-30 | **milestone read** | ens towers on train_pairs_eval + reranker_ens | — | **0.496** | 0.730 | 0.820 | P@1 strong, depth weak; eval-member graph bias identified |
+| 25 | 08-30 | LLM listwise rerank | Qwen3-32B-Q4 reorders top-25, RRF fusion | 0.512 @f=.15 | — | — | — | neutral on full dev (15-q subset +0.04 was noise) |
+| 26 | 08-30 | LLM open generation | 32B nominates recs directly, title-resolve | 0.280 pure | — | — | — | ✗ Q4 can't recall MAL lists, only rank given candidates |
 
 ## Notes
 
