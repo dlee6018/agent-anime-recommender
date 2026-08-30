@@ -13,6 +13,9 @@ python recommend.py "Death Note" -k 5
 # 5. Psycho-Pass
 python recommend.py "Frieren" "Mushishi" -k 10   # multi-anime input
 python recommend.py "K-On!" --model rerank       # force the pure ML pipeline
+
+python serve.py --port 8501                      # persistent server (~15ms/query)
+curl 'localhost:8501/recommend?anime=deathnote&k=5'
 ```
 
 ## Architecture
