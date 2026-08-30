@@ -19,14 +19,16 @@ MORE_RE = re.compile(r"by <strong>(\d+)</strong> more users")
 
 
 def fetch(url: str, tries: int = 4) -> str:
+    """curl subprocess: urllib hung indefinitely on MAL mid-run (2026-08-30)."""
+    import subprocess
     for t in range(tries):
-        try:
-            req = urllib.request.Request(url, headers=UA)
-            return urllib.request.urlopen(req, timeout=30).read().decode()
-        except Exception as e:
-            if t == tries - 1:
-                raise
-            time.sleep(5 + 5 * t)
+        r = subprocess.run(
+            ["curl", "-s", "--max-time", "25", "-A", UA["User-Agent"], url],
+            capture_output=True, timeout=40)
+        if r.returncode == 0 and len(r.stdout) > 10000:
+            return r.stdout.decode(errors="replace")
+        time.sleep(5 + 5 * t)
+    raise RuntimeError(f"curl failed after {tries} tries: {url}")
 
 
 def parse_recs(html: str, mal_id: int) -> list[list[int]]:
