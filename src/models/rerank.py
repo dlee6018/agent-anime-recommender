@@ -12,7 +12,7 @@ DATA = Path(__file__).resolve().parent.parent.parent / "data"
 FEATS = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
          "genre_jac", "year_gap", "cand_logpop", "src_logpop", "type_match",
          "cand_season", "src_season", "studio_match", "cand_score",
-         "transfer_in", "nbr_out"]
+         "transfer_in", "nbr_out", "cand_has_graph", "cand_age"]
 
 SEASON_RE = re.compile(
     r"(?:(\d)(?:nd|rd|th) season|season (\d)|part (\d)|\b(ii|iii|iv)\b)", re.I)
@@ -137,6 +137,8 @@ class FeatureBuilder:
                 lift = con / (max(self.cnt[crow], 1) ** 0.65
                               * max(self.cnt[cj], 1) ** 0.65)
             tin, nout = self.graph_feats(int(c_id), tt_q, tt_emb)
+            has_graph = float(int(c_id) in self.in_lists
+                              or int(c_id) in self.out_lists)
             out.append([
                 float(tt_q @ tt_emb[ci]),
                 float(self.CEMB[si] @ self.CEMB[ci]),
@@ -151,6 +153,7 @@ class FeatureBuilder:
                 float(len(st & set(mc["studios"])) > 0),
                 mc["score"] or 6.5,
                 tin, nout,
+                has_graph, float(2026 - (year_of(int(c_id)) or 2005)),
             ])
         return np.array(out, dtype=np.float32)
 

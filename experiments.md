@@ -29,6 +29,10 @@ W&B project: `anime-rec`.
 | 19 | 08-30 | tt-v7 + item2vec | i2v-200 block (unordered lists) | 0.435 | — | — | — | ✗ noise vs ALS-256; i2v off by default |
 | 20 | 08-30 | wide-union reranker | top150 + maxrank2500 + 50 cooc/content union | 0.499 | — | — | — | recall pool ~0.85 |
 | 21 | 08-30 | 3-seed tower ensemble | concat-normalized embs (mean cosine), retrieval only | 0.464 | — | — | — | +0.023 retrieval; feed reranker next |
+| 22 | 08-30 | + 2-hop graph features | transfer_in (vote-weighted in-edges), nbr_out (sim to cand's list) | 0.505 | — | — | — | both used by LGBM |
+| 23 | 08-30 | ens reranker | 3 seeds/fold (15 towers), ens retrieval + graph feats | 0.515 | — | — | — | champion |
+| 24 | 08-30 | + has_graph/cand_age | indicator for eval-member zero-graph bias | 0.508 | — | — | — | dev-neutral; A/B at next milestone |
+| M1 | 08-30 | **milestone read** | ens towers on train_pairs_eval + reranker_ens | — | **0.496** | 0.730 | 0.820 | P@1 strong, depth weak; eval-member graph bias identified |
 
 ## Notes
 

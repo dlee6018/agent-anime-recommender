@@ -63,7 +63,8 @@ def get_model(name: str):
         cfg = (json.load(open(cfg_file)) if cfg_file.exists()
                else {"reranker": "reranker.txt", "maxrank": 1500,
                      "top_cand": 80, "union_extra": 0})
-        ids, emb = _tt_table()
+        d = np.load(DATA / cfg.get("emb", "two_tower_emb.npz"))
+        ids, emb = d["ids"], d["emb"].astype(np.float32)
         booster = lgb.Booster(model_file=str(DATA / cfg["reranker"]))
         fb = FeatureBuilder(ids)
         import pandas as pd
