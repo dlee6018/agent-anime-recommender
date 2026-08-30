@@ -16,6 +16,9 @@ python recommend.py "K-On!" --model rerank       # force the pure ML pipeline
 
 python serve.py --port 8501                      # persistent server (~15ms/query)
 curl 'localhost:8501/recommend?anime=deathnote&k=5'
+
+# survive shell/session exit:
+nohup .venv/bin/python serve.py --port 8501 > serve.log 2>&1 &
 ```
 
 ## Architecture
