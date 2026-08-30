@@ -40,6 +40,29 @@ class FeatureBuilder:
                 out[i] = e
         return out
 
+    def cooc_top(self, s_id: int, n: int, mask: np.ndarray) -> list[int]:
+        crow = self.cooc_row_of.get(s_id)
+        if crow is None:
+            return []
+        co = np.asarray(self.C[crow].todense()).ravel()
+        s = co / (max(self.cnt[crow], 1) ** 0.65
+                  * np.maximum(self.cnt, 1) ** 0.65)
+        s[~mask] = -np.inf
+        if s_id in self.idx:
+            s[self.idx[s_id]] = -np.inf
+        top = np.argpartition(-s, n)[:n]
+        return [int(self.ids[i]) for i in top[np.argsort(-s[top])]]
+
+    def content_top(self, s_id: int, n: int, mask: np.ndarray) -> list[int]:
+        si = self.idx.get(s_id)
+        if si is None:
+            return []
+        s = self.CEMB @ self.CEMB[si]
+        s[~mask] = -np.inf
+        s[si] = -np.inf
+        top = np.argpartition(-s, n)[:n]
+        return [int(self.ids[i]) for i in top[np.argsort(-s[top])]]
+
     def season_idx(self, aid: int) -> int:
         m = self.meta.get(aid)
         if not m:
@@ -91,7 +114,8 @@ class FeatureBuilder:
 
 def make_rerank_recommender(ids: np.ndarray, tt_emb: np.ndarray,
                             booster, fb: FeatureBuilder,
-                            maxrank_retrieve: int = 1500, top_cand: int = 80):
+                            maxrank_retrieve: int = 1500, top_cand: int = 80,
+                            union_extra: int = 0):
     meta = load_metadata()
     pop = np.array([(meta.get(int(a), {}).get("popularity") or 99999)
                     for a in ids])
@@ -111,6 +135,14 @@ def make_rerank_recommender(ids: np.ndarray, tt_emb: np.ndarray,
         top = np.argpartition(-sim, top_cand)[:top_cand]
         top = top[np.argsort(-sim[top])]
         cands = [int(ids[i]) for i in top]
+        if union_extra:
+            s_dom = min(query_ids, key=lambda q: meta.get(q, {})
+                        .get("popularity") or 10**9)
+            seen = set(cands)
+            for extra in (fb.cooc_top(s_dom, union_extra, rmask),
+                          fb.content_top(s_dom, union_extra, rmask)):
+                cands.extend(c for c in extra if c not in seen)
+                seen.update(extra)
         # featurize vs the most popular query anime (multi-query: mean would
         # need per-query rows; use the dominant query as src context)
         s_id = min(query_ids,

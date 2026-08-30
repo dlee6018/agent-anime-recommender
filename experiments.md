@@ -23,7 +23,9 @@ W&B project: `anime-rec`.
 | 13 | 08-30 | tt-v4 enriched features | + themes/demographics multi-hot, enriched docs re-embedded (lyfesan merge), pairs re-resolved 50k→52.7k | 0.383 | — | — | — | features are the lever (+0.035) |
 | 14 | 08-30 | tt-v4b early stop | best-epoch snapshot (peak ~ep4-10) | 0.393 | — | — | — | model overfits after ~ep10 |
 | 15 | 08-30 | tt-v4c lr/d_out sweep | lr 5e-4 ep50: 0.400; lr 2e-3: 0.384; d_out 512: 0.401 | 0.401 | — | — | — | champion: lr 1e-3, d_out 512 |
-| 16 | 08-30 | tt-v5 Qwen content | Qwen3-Embedding-4B 2560d replaces bge 1024d | 0.431 | — | — | — | champion; large embedder = biggest single lift |
+| 16 | 08-30 | tt-v5 Qwen content | Qwen3-Embedding-4B 2560d replaces bge 1024d | 0.431 | — | — | — | large embedder = biggest single lift |
+| 17 | 08-30 | tt-v6 2023 ALS | ALS-256 on 108M-row 2023 dump (317k users) | 0.441 | — | — | — | retrieval champion |
+| 18 | 08-30 | LGBM reranker | LambdaRank over tt top-80, 5-fold-honest tt feature, 14 feats | 0.489 | — | — | — | +0.048 over retrieval; recall@80=0.70 caps it |
 
 ## Notes
 

@@ -26,10 +26,20 @@ from src.models import two_tower as tt  # noqa: E402
 from src.models.rerank import (FEATS, FeatureBuilder,  # noqa: E402
                                make_rerank_recommender)
 
+import argparse
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--top_cand", type=int, default=80)
+ap.add_argument("--maxrank", type=int, default=1500)
+ap.add_argument("--union_extra", type=int, default=0,
+                help="also union top-N cooc + top-N content candidates")
+ap.add_argument("--out", default="reranker.txt")
+args = ap.parse_args()
+
 DATA = ROOT / "data"
 N_FOLDS = 5
-TOP_CAND = 80
-MAXRANK_RETRIEVE = 1500
+TOP_CAND = args.top_cand
+MAXRANK_RETRIEVE = args.maxrank
 
 meta = load_metadata()
 ids, X, _ = build_features("content_emb_qwen.npz")
@@ -69,6 +79,13 @@ for f in range(N_FOLDS):
         top = np.argpartition(-sim, TOP_CAND)[:TOP_CAND]
         top = top[np.argsort(-sim[top])]
         cands = [int(ids[i]) for i in top]
+        if args.union_extra:
+            seen = set(cands)
+            for extra in (fb.cooc_top(s_id, args.union_extra, retrieve_mask),
+                          fb.content_top(s_id, args.union_extra,
+                                         retrieve_mask)):
+                cands.extend(c for c in extra if c not in seen)
+                seen.update(extra)
         Xrows.append(fb.rows(s_id, cands, tq, emb))
         ylab.append([3 if c in top3 else 2 if c in top10
                      else 1 if c in truth else 0 for c in cands])
@@ -83,7 +100,7 @@ rk = lgb.LGBMRanker(objective="lambdarank", n_estimators=400,
                     learning_rate=0.05, num_leaves=63, min_child_samples=20,
                     label_gain=[0, 1, 3, 7], random_state=0, verbose=-1)
 rk.fit(Xall, yall, group=groups)
-rk.booster_.save_model(str(DATA / "reranker.txt"))
+rk.booster_.save_model(str(DATA / args.out))
 imp = sorted(zip(FEATS, rk.feature_importances_), key=lambda x: -x[1])
 print("feature importance:", imp, flush=True)
 
@@ -93,7 +110,8 @@ tt_emb = d["emb"].astype(np.float32)
 dev_raw = json.load(open(DATA / "dev_set.json"))["queries"]
 dev_set = {int(q): [int(r) for r in v] for q, v in dev_raw.items()}
 fn = with_franchise_filter(make_rerank_recommender(
-    ids, tt_emb, rk.booster_, fb, MAXRANK_RETRIEVE, TOP_CAND))
+    ids, tt_emb, rk.booster_, fb, MAXRANK_RETRIEVE, TOP_CAND,
+    union_extra=args.union_extra))
 res = evaluate(fn, dev_set)
 print(f"RERANK dev P@5={res['precision_at_k']:.3f} mrr={res['mrr']:.3f}",
       flush=True)
