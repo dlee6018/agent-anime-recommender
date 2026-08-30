@@ -55,7 +55,16 @@ def get_model(name: str):
                         for a in ids])
         fn = embed_knn.make_recommender(ids, emb, pop_weight=0.15,
                                         candidate_mask=pop <= 700)
-    elif name in ("rerank", "best"):
+    elif name == "best":
+        # production: graph-priority (crowd's own vote-ranked list) with the
+        # ML pipeline as generalizing fallback
+        import pandas as pd
+
+        from .models.product import make_product_recommender
+        pipeline = get_model("rerank")
+        pairs = pd.read_parquet(DATA / "rec_pairs_merged.parquet")
+        return make_product_recommender(pairs, pipeline)
+    elif name == "rerank":
         import lightgbm as lgb
 
         from .models.rerank import FeatureBuilder, make_rerank_recommender
