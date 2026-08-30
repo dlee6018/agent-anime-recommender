@@ -57,9 +57,13 @@ queries are cold-start in the graph; only co-watch + content + 2-hop
 structure can place them. A 150-anime dev set (with its own symmetric
 holdout) is used for all tuning; the eval set is read only at milestones.
 
-Goal: mean P@5 ≥ 0.80. Product path: ~1.0 by construction for listed anime.
-ML pipeline: see `experiments.md` (numbered experiment log with all
-negative results too) and W&B project `anime-rec`.
+Goal: mean P@5 ≥ 0.80 under the protocol above (strict symmetric holdout —
+the spec in PLAN.md). **Headline: strict eval P@5 = 0.508** (goal not met).
+Also measured: 0.778 under a relaxed "src-only" holdout (only the eval
+anime's own rec page hidden; with 91% edge symmetry the reverse edges leak
+most of the answer — reported for context, not as the spec number), and
+~1.0 for the product path by construction. Full numbered experiment log
+(negative results included): `experiments.md`; W&B project `anime-rec`.
 
 ## Repro
 

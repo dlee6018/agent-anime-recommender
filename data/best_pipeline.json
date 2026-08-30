@@ -1,0 +1,1 @@
+{"reranker": "reranker_srconly5.txt", "maxrank": 8000, "top_cand": 200, "union_extra": 80, "graph": "rec_pairs_fresh.parquet", "emb": "tt_ens_emb.npz"}

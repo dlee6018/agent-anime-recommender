@@ -1,10 +1,14 @@
-data/
+data/*
 !data/eval_set.json
 !data/dev_set.json
 !data/userrecs.json
+!data/userrecs_votes.json
 !data/top200_popularity.json
+!data/best_pipeline.json
 .venv/
 __pycache__/
 wandb/
 *.pt
 *.faiss
+serve.log
+nohup.out

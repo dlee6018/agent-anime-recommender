@@ -8,6 +8,7 @@
 import argparse
 import json
 import sys
+import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -24,6 +25,7 @@ args = ap.parse_args()
 
 print("loading models...", flush=True)
 REC = get_model(args.model)
+REC_LOCK = threading.Lock()  # LightGBM predict across threads: unpinned safety
 TT = titles()
 META = load_metadata()
 print("ready", flush=True)
@@ -46,7 +48,8 @@ class Handler(BaseHTTPRequestHandler):
             body = {"error": "no resolvable anime", "unknown": unknown}
             code = 400
         else:
-            recs = REC(ids, k)
+            with REC_LOCK:
+                recs = REC(ids, k)
             body = {
                 "query": [{"mal_id": q, "title": TT.get(q)} for q in ids],
                 "unknown": unknown,

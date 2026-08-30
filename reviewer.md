@@ -3,6 +3,46 @@
 Independent hourly review of the recommender agent's work. Each entry: what
 exists / what changed since last check, bugs, risks, and feedback. Newest first.
 
+## 2026-08-30 ~19:45 UTC — Review #1 (covers 01:10 → 19:45; session was suspended ~01:15–19:29 so hourly reviews could not fire)
+
+### State / progress
+- Massive session: 41 commits, 43 numbered experiments, milestones M1–M8, 50 W&B runs (project `anime-rec`), all between ~01:00 and ~10:40 UTC. Agent idle since ~11:40; working tree clean.
+- Architecture now: **product path** (`best`: graph-priority — returns the vote-ranked MAL rec list when the query has one, ML fallback otherwise) + **ML pipeline** (`rerank`: Qwen3-Embedding-4B content + ALS-256 on the 109M-row 2023 dump + 3-seed two-tower retrieval + LightGBM LambdaRank over 21 features incl. 2-hop graph features).
+- HTTP server `serve.py` running on 127.0.0.1:8501 (localhost-only ✓); smoke test: Death Note → Code Geass, Monster, Zankyou no Terror, Mirai Nikki, Psycho-Pass (15ms, matches MAL). Tests: 4 (eval harness), passing.
+- **Headline numbers**: eval P@5 = **0.508 strict** (agreed symmetric holdout) / **0.778 "src-only"** (relaxed holdout) / dev 0.709. Goal 0.80 **not met under the agreed protocol**.
+
+### Bugs / blockers
+1. **The 0.778 headline is under a protocol the original spec explicitly rejected.** PLAN.md's agreed eval rigor ("ALL rec edges incident to an eval anime are removed... the graph is symmetric: an edge Code Geass→Death Note leaks Death Note") IS the "strict" protocol → the spec-compliant number is **0.508** (M2). "src-only" (`scripts/eval_milestone.py:52` — only `src.isin(eval_ids)` dropped) leaves reverse edges visible; with 91% edge symmetry, the new `rev_edge`/`colist` reranker features then read a near-copy of the hidden truth — that's why they're "killer features" (M2b→M4: 0.640→0.778). Credit: the agent surfaced this honestly (PLAN.md update, "User to confirm which protocol the 0.80 goal refers to") and measures both. But README.md's Evaluation section describes the strict holdout while its metrics narrative leans on src-only numbers — inconsistent, and M8 is labeled "final 0.778" with strict as an afterthought. **Needs user decision; my read: the spec already decided — strict — so the goal is not 60% done, it's at 0.508.**
+2. **eval/dev sets are STILL not in git, and experiments.md § provenance falsely claims "Both committed to git."** `.gitignore` was given `!data/eval_set.json` etc., but the negations are dead: the parent pattern `data/` excludes the directory itself, so git never descends (verified: `git check-ignore` → ignored via `data/`; `git ls-files data/` is empty). Fix: use `data/*` + negations, or `git add -f data/eval_set.json data/dev_set.json ...`. Until then the "frozen" ground truth (sha 1d6ddd9d… recorded ✓) exists in exactly one unversioned copy.
+3. **Disk at 95% (8GB free).** `~/.cache` holds 37GB: 19GB gguf (Qwen3-32B-Q4 — LLM rerank experiments concluded *neutral*, so this is dead weight), 15GB huggingface. One more model download fills the disk. Recommend deleting the gguf.
+4. **Unreproducible claim**: M5 justifies `maxrank 8000` with "truth p99≈7100". I measure truth-popularity p99 = 5487 (dev) / 3311 (eval) on 2023 ranks, 4098/2644 on enriched ranks. No source gives ≈7100. Benign direction (eval needs less than dev, so the mask isn't eval-tuned) but the recorded rationale doesn't check out.
+
+### Verified claims (spot checks)
+- "45% of eval truth items are eval members": 0.449 ✓. M8 mean from `milestone_last.json`: 0.778 ✓ (n=100). dev∩eval queries = 0 ✓. Eval truth coverage 99% ✓ (from #0). eval_set sha256 matches the log ✓.
+- Exp 38's "product-path dev validation 0.948" is an oracle-on-itself check (the product graph contains dev srcs' own lists — same source as dev truth). Fine as an ordering sanity check; not a generalization result and shouldn't be quoted as one.
+- `best_pipeline.json` points `rerank` at `rec_pairs_fresh.parquet`, which contains 5,335 eval-src / 9,144 eval-dst edges — fine for *serving*, and `eval_milestone.py` correctly rebuilds towers + graph features from holdout-filtered pairs instead (exp 37 records the one time this was botched and caught).
+
+### Smaller issues
+- Milestone towers pin `epochs=12` (`eval_milestone.py:58`) — exp 43 shows flat 8–15, fine, but the pin lives in code, not config.
+- Franchise filter: single-token titles are aggressive (`Monster` ⊆ `Monster Musume` → filtered); agent measured 0.33% false-kill, acceptable.
+- Only the eval harness has tests; `franchise.py`, `resolve_title`, and the 21 reranker features (the actual complexity) have none.
+- `ThreadingHTTPServer` shares one LightGBM Booster across threads; predict is generally safe but unpinned — low risk, worth a lock if the server matters.
+
+### Status of previously reported issues (#0)
+1. `src/registry.py` missing → **fixed** (CLI + server work).
+2. 2018-vintage interactions mislabeled 2023 → **fixed well**: replaced with Kaggle dbdmobile 2023 dump (109M rows, 317k users); provenance section now documents the mistake and credits the catch.
+3. `title_to_id` collision order → **fixed** (popularity-sorted inserts + synonyms + space/punct-insensitive fallbacks with popularity guard).
+4. Irreproducible `rec_pairs`/`top200` → **fixed** (`build_enriched_meta.py`, `build_fresh_graph.py`, `merge_scraped_pairs.py`; README repro section).
+5. eval/dev both rewriting `train_pairs.parquet` → **fixed** (three explicit files: train_pairs / train_pairs_eval / train_pairs_srconly_dev; only dev script writes the dev one).
+6. Frozen eval unversioned → **attempted, still broken** (bug #2 above) + now a false "committed" claim.
+
+### Engineering-bar feedback
+Large improvement over #0: granular commits, negative results logged (exps 8–10, 19, 26, 28, 32–36, 42), one-variable-at-a-time lesson recorded after exp 32, W&B in use, provenance section exists, reviewer findings acted on. The remaining bar-raisers: fix the gitignore negation (2-minute fix, closes the "frozen" hole), reconcile README/experiments so ONE protocol is the headline (strict, per spec, unless the user overrules), free the 19GB dead LLM, add tests for franchise/title-resolution.
+
+### Next check
+- Did the user decide the protocol question? Did the agent resume; is it pursuing strict-protocol gains (0.508 → 0.80 is a long way: the honest levers are co-watch/content generalization + 2-hop features that don't require seeing eval edges)?
+- gitignore fix landed? Disk freed? 234 failed extended-scrape retries?
+
 ---
 
 ## 2026-08-30 ~01:10 UTC — Baseline (review #0)

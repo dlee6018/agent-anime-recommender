@@ -44,7 +44,7 @@ W&B project: `anime-rec`.
 | M3 | 08-30 | src-only matched booster | fold holdout = src_only | — | **0.696** | 0.860 | 0.921 | feature-distribution match pays |
 | 30 | 08-30 | rev_edge + colist feats | reverse edge (cand→q) + third-party co-listing | 0.700 int | — | — | — | killer features under src-only (91% edge symmetry) |
 | M4 | 08-30 | + rev_edge/colist | src-only | — | **0.778** | 0.910 | 0.945 | |
-| M5 | 08-30 | wide retrieval | maxrank 8000 (truth p99≈7100), top200, union80, 5-seed eval towers | — | **0.784** | 0.920 | 0.958 | |
+| M5 | 08-30 | wide retrieval | maxrank 8000, top200, union80, 5-seed eval towers | — | **0.784** | 0.920 | 0.958 | orig "truth p99≈7100" rationale didn't reproduce (reviewer #1: p99=5487 dev / 3311 eval on 2023 ranks) — mask is generous either way, decision stands |
 | 31 | 08-30 | LGBM sweep | label_gain 0,1,5,13 best of 3 | 0.709 int | — | — | — | marginal |
 | 32 | 08-30 | rev_fam + fam-union ×2 | 3 changes at once | 0.693 int | 0.758 | — | — | ✗ regression; lesson: one variable at a time |
 | 33 | 08-30 | rev_fam isolated / fam-collapsed q_in | | 0.709 / 0.601 int | 0.774 | — | — | rev_fam ~neutral; q_in collapse ✗✗ (base queries inherit sequel noise) |
@@ -53,12 +53,24 @@ W&B project: `anime-rec`.
 | 35 | 08-30 | output-level RRF fusion | pipeline + cooc + content ranks | ≤0.708 | — | — | — | ✗ LGBM already absorbs these signals |
 | 36 | 08-30 | in-batch false-neg mask | mask same-src positives in softmax denom | 0.432 single | — | — | — | ✗ collisions too rare at 13k items |
 | 37 | 08-30 | LLM rerank, rich prompts | genres/themes in candidate listing, fuse .15 | — | — | — | — | measured against product path by mistake (registry `best` changed); LLM line closed as ~neutral |
-| 38 | 08-30 | product-path dev validation | graph-priority recommender vs dev truth | **0.948** | — | — | — | product ordering (ayan votes + pseudo-votes) ≈ crowd truth |
+| 38 | 08-30 | product-path dev validation | graph-priority recommender vs dev truth | **0.948** | — | — | — | oracle-on-itself ordering check (product graph contains dev srcs' own lists) — NOT a generalization result |
 | 39 | 08-30 | bagged LGBM ×3 | subsample .8, colsample .85, avg scores | 0.708 | — | — | — | neutral; reranker_srconly7 reproduces 0.709 (stability ✓) |
 | 40 | 08-30 | fresh-vote rescrape | per-pair votes parsed from userrecs HTML | — | — | — | — | fresh ≈ March: log-corr 0.99, top-10 overlap 0.966 → graph static; only value = real votes for 558 pseudo-vote srcs |
 | 41 | 08-30 | all-fresh graph retrain | towers + reranker on rec_pairs_fresh | 0.704 | — | — | — | neutral (0.709 baseline) — static graph confirmed; champion state restored; fresh graph kept for product path |
 | 42 | 08-30 | co-watch pseudo-edge aug | +9.2k cooc-lift pairs as weak positives (votes=1) | 0.360 | — | — | — | ✗✗ teaches co-watched=recommended; drowns true signal |
 | 43 | 08-30 | milestone-tower epochs | 8/10/12/15, no early stop, dev-condition | 0.684-0.697 | — | — | — | flat within noise; epochs=12 stands |
+
+### Reviewer #1 follow-ups (2026-08-30 evening)
+- Headline protocol reconciled to STRICT per spec (README updated); src-only
+  reported as labeled relaxed alternative pending user override (phone ping sent).
+- .gitignore negation bug fixed (`data/` → `data/*`); eval/dev sets, userrecs
+  snapshots, pipeline config now genuinely tracked (hashes unchanged).
+- The "234 failed" extended scrapes were verified to be anime with genuinely
+  EMPTY rec lists, not fetch failures — nothing to retry.
+- Tests added for franchise filter + title resolution (9 total, passing);
+  serve.py booster predict now behind a lock.
+- 19GB Qwen3-32B gguf (LLM experiments concluded neutral) kept per user's
+  earlier "prob don't delete the qwen stuff" — flagged for their decision.
 
 ## Status (end of session 1, 2026-08-30 ~08:00 UTC)
 - **Product path** (`recommend.py`, model `best`): graph-priority + ML fallback.
@@ -92,7 +104,10 @@ without it content-knn returns sequels). Supervision on rec pairs is the lever.
 
 ### Data provenance
 - eval_set.json sha256 1d6ddd9d… (frozen 2026-08-30, 100 queries);
-  dev_set.json sha256 f141e02e… (150 queries). Both committed to git.
+  dev_set.json sha256 f141e02e… (150 queries). NOTE: an earlier version of
+  this line claimed they were committed while a dead .gitignore negation
+  (`data/` blocks descent) kept them untracked — reviewer #1 caught it;
+  actually committed 2026-08-30 evening, hashes unchanged.
 - Interactions: Kaggle `dbdmobile/myanimelist-dataset` v5 `user-filtered.csv`
   (109M rows, snapshot ~mid-2023, includes unscored watched rows). The earlier
   `animelists_filtered.csv` (HF SiddXiao) was the **2018** azathoth dump —
