@@ -62,7 +62,7 @@ def get_model(name: str):
 
         from .models.product import make_product_recommender
         pipeline = get_model("rerank")
-        pairs = pd.read_parquet(DATA / "rec_pairs_merged.parquet")
+        pairs = pd.read_parquet(DATA / "rec_pairs_fresh.parquet")
         return make_product_recommender(pairs, pipeline)
     elif name == "rerank":
         import lightgbm as lgb
