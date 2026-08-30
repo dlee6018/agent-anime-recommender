@@ -11,7 +11,8 @@ DATA = Path(__file__).resolve().parent.parent.parent / "data"
 
 FEATS = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
          "genre_jac", "year_gap", "cand_logpop", "src_logpop", "type_match",
-         "cand_season", "src_season", "studio_match", "cand_score"]
+         "cand_season", "src_season", "studio_match", "cand_score",
+         "transfer_in", "nbr_out"]
 
 SEASON_RE = re.compile(
     r"(?:(\d)(?:nd|rd|th) season|season (\d)|part (\d)|\b(ii|iii|iv)\b)", re.I)
@@ -35,6 +36,8 @@ class FeatureBuilder:
         self.cooc_ids = cm["ids"]
         self.cooc2uni = np.array([self.idx.get(int(x), -1)
                                   for x in cm["ids"]], dtype=np.int64)
+        self.out_lists: dict[int, list[tuple[int, float]]] = {}
+        self.in_lists: dict[int, list[tuple[int, float]]] = {}
 
     def _align(self, src_ids, emb):
         out = np.zeros((len(self.ids), emb.shape[1]), dtype=np.float32)
@@ -43,6 +46,38 @@ class FeatureBuilder:
             if i is not None:
                 out[i] = e
         return out
+
+    def set_graph(self, pairs) -> None:
+        """Visible rec graph for 2-hop features. Swap per fold during
+        reranker training (fold srcs' edges hidden); use the widest legal
+        graph at inference (full rec_pairs in production, eval-holdout file
+        for milestone reads)."""
+        self.out_lists: dict[int, list[tuple[int, float]]] = {}
+        self.in_lists: dict[int, list[tuple[int, float]]] = {}
+        for s, g in pairs.groupby("src"):
+            v = np.log1p(g.votes.to_numpy().astype(np.float32))
+            v /= v.sum() + 1e-9
+            for d, wt in zip(g.dst, v):
+                si, di = int(s), int(d)
+                if si in self.idx and di in self.idx:
+                    self.out_lists.setdefault(si, []).append((di, float(wt)))
+                    self.in_lists.setdefault(di, []).append((si, float(wt)))
+
+    def graph_feats(self, cand: int, tt_q: np.ndarray,
+                    tt_emb: np.ndarray) -> tuple[float, float]:
+        """(transfer_in, nbr_out) for one candidate vs the query embedding."""
+        tin = 0.0
+        for s, wt in self.in_lists.get(cand, ()):
+            sim = float(tt_q @ tt_emb[self.idx[s]])
+            if sim > 0:
+                tin += (sim ** 3) * wt
+        nbr = self.out_lists.get(cand, ())
+        nout = 0.0
+        if nbr:
+            sims = sorted((float(tt_q @ tt_emb[self.idx[d]])
+                           for d, _ in nbr), reverse=True)
+            nout = float(np.mean(sims[:5]))
+        return tin, nout
 
     def cooc_top(self, s_id: int, n: int, mask: np.ndarray) -> list[int]:
         crow = self.cooc_row_of.get(s_id)
@@ -101,6 +136,7 @@ class FeatureBuilder:
                 con = float(co[cj])
                 lift = con / (max(self.cnt[crow], 1) ** 0.65
                               * max(self.cnt[cj], 1) ** 0.65)
+            tin, nout = self.graph_feats(int(c_id), tt_q, tt_emb)
             out.append([
                 float(tt_q @ tt_emb[ci]),
                 float(self.CEMB[si] @ self.CEMB[ci]),
@@ -114,6 +150,7 @@ class FeatureBuilder:
                 float(self.season_idx(int(c_id))), float(ssea),
                 float(len(st & set(mc["studios"])) > 0),
                 mc["score"] or 6.5,
+                tin, nout,
             ])
         return np.array(out, dtype=np.float32)
 

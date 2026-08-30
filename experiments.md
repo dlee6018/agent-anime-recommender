@@ -27,6 +27,8 @@ W&B project: `anime-rec`.
 | 17 | 08-30 | tt-v6 2023 ALS | ALS-256 on 108M-row 2023 dump (317k users) | 0.441 | — | — | — | retrieval champion |
 | 18 | 08-30 | LGBM reranker | LambdaRank over tt top-80, 5-fold-honest tt feature, 14 feats | 0.489 | — | — | — | +0.048 over retrieval; recall@80=0.70 caps it |
 | 19 | 08-30 | tt-v7 + item2vec | i2v-200 block (unordered lists) | 0.435 | — | — | — | ✗ noise vs ALS-256; i2v off by default |
+| 20 | 08-30 | wide-union reranker | top150 + maxrank2500 + 50 cooc/content union | 0.499 | — | — | — | recall pool ~0.85 |
+| 21 | 08-30 | 3-seed tower ensemble | concat-normalized embs (mean cosine), retrieval only | 0.464 | — | — | — | +0.023 retrieval; feed reranker next |
 
 ## Notes
 

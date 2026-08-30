@@ -66,6 +66,9 @@ def get_model(name: str):
         ids, emb = _tt_table()
         booster = lgb.Booster(model_file=str(DATA / cfg["reranker"]))
         fb = FeatureBuilder(ids)
+        import pandas as pd
+        fb.set_graph(pd.read_parquet(
+            DATA / cfg.get("graph", "rec_pairs.parquet")))
         fn = make_rerank_recommender(
             ids, emb, booster, fb, cfg["maxrank"], cfg["top_cand"],
             union_extra=cfg["union_extra"])

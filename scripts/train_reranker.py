@@ -34,6 +34,8 @@ ap.add_argument("--maxrank", type=int, default=1500)
 ap.add_argument("--union_extra", type=int, default=0,
                 help="also union top-N cooc + top-N content candidates")
 ap.add_argument("--out", default="reranker.txt")
+ap.add_argument("--n_seeds", type=int, default=1,
+                help="towers per fold; embeddings concatenated (mean cosine)")
 args = ap.parse_args()
 
 DATA = ROOT / "data"
@@ -66,8 +68,13 @@ for f in range(N_FOLDS):
     tp = train_pairs[~train_pairs.src.isin(fold_srcs)
                      & ~train_pairs.dst.isin(fold_srcs)]
     print(f"fold {f}: tower on {len(tp)} pairs", flush=True)
-    tower, emb = tt.train_two_tower(ids, X, tp, epochs=12, d_out=512, seed=f,
-                                    device="cuda")
+    embs = []
+    for s in range(args.n_seeds):
+        _, e = tt.train_two_tower(ids, X, tp, epochs=12, d_out=512,
+                                  seed=f * 100 + s, device="cuda")
+        embs.append(e)
+    emb = np.concatenate(embs, axis=1) / np.sqrt(len(embs))
+    fb.set_graph(tp)  # 2-hop features must not see fold srcs' edges
     for s_id in sorted(fold_srcs):
         truth = by_src_votes.get(s_id, {})
         ranked = sorted(truth, key=truth.get, reverse=True)
@@ -105,7 +112,9 @@ imp = sorted(zip(FEATS, rk.feature_importances_), key=lambda x: -x[1])
 print("feature importance:", imp, flush=True)
 
 # dev evaluation: retrieval-only vs reranked (champion tower embeddings)
-d = np.load(DATA / "two_tower_emb.npz")
+fb.set_graph(train_pairs)  # dev-honest graph
+emb_file = "tt_ens_emb.npz" if args.n_seeds > 1 else "two_tower_emb.npz"
+d = np.load(DATA / emb_file)
 tt_emb = d["emb"].astype(np.float32)
 dev_raw = json.load(open(DATA / "dev_set.json"))["queries"]
 dev_set = {int(q): [int(r) for r in v] for q, v in dev_raw.items()}
