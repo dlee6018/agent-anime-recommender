@@ -67,12 +67,17 @@ def title_to_id() -> dict[str, int]:
     return t2i
 
 
+def _squash(s: str) -> str:
+    return "".join(c for c in s if c.isalnum())
+
+
 @lru_cache(maxsize=1)
 def _t2i_nospace() -> dict[str, int]:
+    """alphanumeric-only title index ('steins gate' -> Steins;Gate TV)."""
     meta = load_metadata()
     out = {}
     for t, aid in title_to_id().items():
-        key = t.replace(" ", "")
+        key = _squash(t)
         prev = out.get(key)
         if prev is None or (meta[aid]["popularity"] or 10**9) < \
                 (meta[prev]["popularity"] or 10**9):
@@ -89,7 +94,7 @@ def resolve_title(query: str) -> int | None:
     meta = load_metadata()
     q = norm_title(query)
     exact = t2i.get(q)
-    nospace = _t2i_nospace().get(q.replace(" ", ""))
+    nospace = _t2i_nospace().get(_squash(q))
     cands = [aid for t, aid in t2i.items() if q in t]
     sub = (min(cands, key=lambda a: meta[a]["popularity"] or 10**9)
            if cands else None)
