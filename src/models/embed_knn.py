@@ -11,8 +11,13 @@ DATA = Path(__file__).resolve().parent.parent.parent / "data"
 
 def make_recommender(ids: np.ndarray, emb: np.ndarray,
                      pop_weight: float = 0.0,
-                     candidate_mask: np.ndarray | None = None):
-    """ids: int64[N], emb: float32[N,D] (L2-normalized rows)."""
+                     candidate_mask: np.ndarray | None = None,
+                     query_emb: np.ndarray | None = None):
+    """ids: int64[N], emb: float32[N,D] (L2-normalized rows).
+    query_emb: optional separate table for the query side (asymmetric towers);
+    candidates are always scored with `emb`."""
+    if query_emb is None:
+        query_emb = emb
     idx = {int(a): i for i, a in enumerate(ids)}
     meta = load_metadata()
     pop_prior = np.array(
@@ -26,7 +31,7 @@ def make_recommender(ids: np.ndarray, emb: np.ndarray,
         if not qrows:
             order = np.argsort(-pop_prior * candidate_mask)
             return [int(ids[i]) for i in order[:k]]
-        qv = emb[qrows].mean(axis=0)
+        qv = query_emb[qrows].mean(axis=0)
         qv /= np.linalg.norm(qv) + 1e-9
         sim = emb @ qv + pop_weight * pop_prior
         sim[~candidate_mask] = -np.inf

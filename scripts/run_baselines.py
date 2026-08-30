@@ -29,7 +29,7 @@ for name in MODELS:
     run.log({"dev/p5": dev["precision_at_k"], "dev/mrr": dev["mrr"],
              "eval/p5": ev["precision_at_k"], "eval/p1": ev["precision_at_1"],
              "eval/mrr": ev["mrr"]})
-    run.finish(quiet=True)
+    run.finish()
     print(f"\n=== {name}:  dev P@5={dev['precision_at_k']:.3f}  "
           f"eval P@5={ev['precision_at_k']:.3f}")
     if name == MODELS[-1]:
