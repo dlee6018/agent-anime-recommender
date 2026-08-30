@@ -54,6 +54,7 @@ W&B project: `anime-rec`.
 | 36 | 08-30 | in-batch false-neg mask | mask same-src positives in softmax denom | 0.432 single | — | — | — | ✗ collisions too rare at 13k items |
 | 37 | 08-30 | LLM rerank, rich prompts | genres/themes in candidate listing, fuse .15 | — | — | — | — | measured against product path by mistake (registry `best` changed); LLM line closed as ~neutral |
 | 38 | 08-30 | product-path dev validation | graph-priority recommender vs dev truth | **0.948** | — | — | — | product ordering (ayan votes + pseudo-votes) ≈ crowd truth |
+| 39 | 08-30 | bagged LGBM ×3 | subsample .8, colsample .85, avg scores | 0.708 | — | — | — | neutral; reranker_srconly7 reproduces 0.709 (stability ✓) |
 
 ## Status (end of session 1, 2026-08-30 ~08:00 UTC)
 - **Product path** (`recommend.py`, model `best`): graph-priority + ML fallback.
