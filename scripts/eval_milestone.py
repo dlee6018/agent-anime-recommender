@@ -71,6 +71,8 @@ res = evaluate(fn, load_eval_set())
 print(f"\nMILESTONE eval P@5={res['precision_at_k']:.3f} "
       f"P@1={res['precision_at_1']:.3f} MRR={res['mrr']:.3f}")
 print_report(res, titles(), n_worst=10)
+json.dump({str(q): p for q, p in res["per_query"].items()},
+          open(DATA / "milestone_last.json", "w"))
 
 run = wandb.init(project="anime-rec", name=args.name,
                  config={**cfg, "n_seeds": args.n_seeds, "milestone": True})

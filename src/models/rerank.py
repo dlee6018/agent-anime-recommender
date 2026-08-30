@@ -6,6 +6,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from ..data import load_metadata, year_of
+from ..franchise import same_franchise
 
 DATA = Path(__file__).resolve().parent.parent.parent / "data"
 
@@ -13,7 +14,7 @@ FEATS = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
          "genre_jac", "year_gap", "cand_logpop", "src_logpop", "type_match",
          "cand_season", "src_season", "studio_match", "cand_score",
          "transfer_in", "nbr_out", "cand_has_graph", "cand_age",
-         "rev_edge", "colist"]
+         "rev_edge", "colist", "rev_fam"]
 
 SEASON_RE = re.compile(
     r"(?:(\d)(?:nd|rd|th) season|season (\d)|part (\d)|\b(ii|iii|iv)\b)", re.I)
@@ -152,6 +153,12 @@ class FeatureBuilder:
                         if d == int(c_id):
                             colist += w_sq * w_sc
                             break
+            # sequel queries: candidate's list naming ANY franchise sibling
+            # of the query is nearly as strong as naming the query itself
+            rev_fam = rev
+            for d, wt in self.out_lists.get(int(c_id), ()):
+                if wt > rev_fam and same_franchise(d, s_id):
+                    rev_fam = wt
             out.append([
                 float(tt_q @ tt_emb[ci]),
                 float(self.CEMB[si] @ self.CEMB[ci]),
@@ -167,7 +174,7 @@ class FeatureBuilder:
                 mc["score"] or 6.5,
                 tin, nout,
                 has_graph, float(2026 - (year_of(int(c_id)) or 2005)),
-                rev, colist,
+                rev, colist, rev_fam,
             ])
         return np.array(out, dtype=np.float32)
 
@@ -199,8 +206,13 @@ def make_rerank_recommender(ids: np.ndarray, tt_emb: np.ndarray,
             s_dom = min(query_ids, key=lambda q: meta.get(q, {})
                         .get("popularity") or 10**9)
             seen = set(cands)
-            in_nbrs = [s for s, _ in sorted(fb.in_lists.get(s_dom, ()),
-                                            key=lambda x: -x[1])[:union_extra]]
+            fam_in = list(fb.in_lists.get(s_dom, ()))
+            from ..franchise import same_franchise as _sf
+            for sib in list(fb.in_lists):
+                if sib != s_dom and _sf(sib, s_dom):
+                    fam_in.extend(fb.in_lists[sib])
+            in_nbrs = [s for s, _ in sorted(fam_in, key=lambda x: -x[1])
+                       [:union_extra * 2]]
             for extra in (in_nbrs,
                           fb.cooc_top(s_dom, union_extra, rmask),
                           fb.content_top(s_dom, union_extra, rmask)):
