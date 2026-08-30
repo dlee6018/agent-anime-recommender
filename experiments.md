@@ -58,6 +58,7 @@ W&B project: `anime-rec`.
 | 40 | 08-30 | fresh-vote rescrape | per-pair votes parsed from userrecs HTML | — | — | — | — | fresh ≈ March: log-corr 0.99, top-10 overlap 0.966 → graph static; only value = real votes for 558 pseudo-vote srcs |
 | 41 | 08-30 | all-fresh graph retrain | towers + reranker on rec_pairs_fresh | 0.704 | — | — | — | neutral (0.709 baseline) — static graph confirmed; champion state restored; fresh graph kept for product path |
 | 42 | 08-30 | co-watch pseudo-edge aug | +9.2k cooc-lift pairs as weak positives (votes=1) | 0.360 | — | — | — | ✗✗ teaches co-watched=recommended; drowns true signal |
+| 43 | 08-30 | milestone-tower epochs | 8/10/12/15, no early stop, dev-condition | 0.684-0.697 | — | — | — | flat within noise; epochs=12 stands |
 
 ## Status (end of session 1, 2026-08-30 ~08:00 UTC)
 - **Product path** (`recommend.py`, model `best`): graph-priority + ML fallback.
