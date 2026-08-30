@@ -51,6 +51,9 @@ W&B project: `anime-rec`.
 | M8 | 08-30 | **final dev-selected read** | reranker_srconly5 (dev champion), 7-seed towers | 0.709 | **0.778** | **0.940** | **0.970** | src-only protocol; strict symmetric = 0.508 (M2) |
 | 34 | 08-30 | sequel query-emb expansion | 0.6·q + 0.4·base emb | 0.683 | — | — | — | ✗ |
 | 35 | 08-30 | output-level RRF fusion | pipeline + cooc + content ranks | ≤0.708 | — | — | — | ✗ LGBM already absorbs these signals |
+| 36 | 08-30 | in-batch false-neg mask | mask same-src positives in softmax denom | 0.432 single | — | — | — | ✗ collisions too rare at 13k items |
+| 37 | 08-30 | LLM rerank, rich prompts | genres/themes in candidate listing, fuse .15 | — | — | — | — | measured against product path by mistake (registry `best` changed); LLM line closed as ~neutral |
+| 38 | 08-30 | product-path dev validation | graph-priority recommender vs dev truth | **0.948** | — | — | — | product ordering (ayan votes + pseudo-votes) ≈ crowd truth |
 
 ## Status (end of session 1, 2026-08-30 ~08:00 UTC)
 - **Product path** (`recommend.py`, model `best`): graph-priority + ML fallback.

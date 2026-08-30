@@ -63,11 +63,20 @@ def describe(aid: int) -> str:
     return f"{m['name']} ({m['type']} {y})"
 
 
+def describe_rich(aid: int) -> str:
+    m = meta.get(aid)
+    if not m:
+        return f"anime #{aid}"
+    y = year_of(aid) or "?"
+    tags = ", ".join((m["genres"] + m["themes"] + m["demographics"])[:7])
+    return f"{m['name']} ({m['type']} {y}; {tags})"
+
+
 def make_llm_recommender(base_fn):
     def recommend(query_ids: list[int], k: int) -> list[int]:
         cands = base_fn(query_ids, args.n_cand)
         q = query_ids[0]
-        listing = "\n".join(f"{i + 1}. {describe(c)}"
+        listing = "\n".join(f"{i + 1}. {describe_rich(c)}"
                             for i, c in enumerate(cands))
         prompt = (
             f"On MyAnimeList, the anime \"{describe(q)}\" has a user-voted "
@@ -113,7 +122,7 @@ if args.graph:
 
 from src.registry import get_model  # noqa: E402  (after graph override)
 
-base = get_model("best")
+base = get_model("rerank")  # the ML pipeline; "best" is the product path
 ev = {int(q): [int(r) for r in v]
       for q, v in json.load(open(ROOT / args.eval_set))["queries"].items()}
 if args.limit:
