@@ -67,17 +67,42 @@ def title_to_id() -> dict[str, int]:
     return t2i
 
 
-def resolve_title(query: str) -> int | None:
-    """Exact normalized match, then substring fallback (most popular wins)."""
-    t2i = title_to_id()
-    q = norm_title(query)
-    if q in t2i:
-        return t2i[q]
+@lru_cache(maxsize=1)
+def _t2i_nospace() -> dict[str, int]:
     meta = load_metadata()
+    out = {}
+    for t, aid in title_to_id().items():
+        key = t.replace(" ", "")
+        prev = out.get(key)
+        if prev is None or (meta[aid]["popularity"] or 10**9) < \
+                (meta[prev]["popularity"] or 10**9):
+            out[key] = aid
+    return out
+
+
+def resolve_title(query: str) -> int | None:
+    """Exact normalized match, then space-insensitive, then substring
+    (most popular wins). An obscure exact match loses to a far more popular
+    space-insensitive/substring match ('deathnote' must not resolve to the
+    literal 'DEATHNOTE' music entry)."""
+    t2i = title_to_id()
+    meta = load_metadata()
+    q = norm_title(query)
+    exact = t2i.get(q)
+    nospace = _t2i_nospace().get(q.replace(" ", ""))
     cands = [aid for t, aid in t2i.items() if q in t]
-    if cands:
-        return min(cands, key=lambda a: meta[a]["popularity"] or 10**9)
-    return None
+    sub = (min(cands, key=lambda a: meta[a]["popularity"] or 10**9)
+           if cands else None)
+
+    def pop(a):
+        return (meta[a]["popularity"] or 10**9) if a is not None else 10**9
+
+    best_alt = min((a for a in (nospace, sub) if a is not None),
+                   key=pop, default=None)
+    if exact is not None and best_alt is not None and exact != best_alt:
+        if pop(exact) > 3000 and pop(best_alt) < 500:
+            return best_alt
+    return exact if exact is not None else best_alt
 
 
 def year_of(aid: int) -> int | None:
