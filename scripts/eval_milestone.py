@@ -29,13 +29,29 @@ from src.models.rerank import FeatureBuilder, make_rerank_recommender  # noqa: E
 ap = argparse.ArgumentParser()
 ap.add_argument("--n_seeds", type=int, default=3)
 ap.add_argument("--name", default="milestone")
+ap.add_argument("--holdout", choices=["symmetric", "src_only"],
+                default="symmetric",
+                help="symmetric: no edge may touch an eval anime (strict). "
+                     "src_only: only eval anime's OWN lists hidden; edges "
+                     "pointing TO them from other lists stay visible "
+                     "(the literal 'never saw its rec page' reading).")
+ap.add_argument("--reranker", default=None,
+                help="override booster file from best_pipeline.json")
 args = ap.parse_args()
 
 DATA = ROOT / "data"
 cfg = json.load(open(DATA / "best_pipeline.json"))
+if args.reranker:
+    cfg["reranker"] = args.reranker
 ids, X, _ = build_features("content_emb_qwen.npz")
-pairs = pd.read_parquet(DATA / "train_pairs_eval.parquet")
-print(f"eval-condition training pairs: {len(pairs)}", flush=True)
+full = pd.read_parquet(DATA / "rec_pairs.parquet")
+eval_ids = {int(q) for q in json.load(open(DATA / "eval_set.json"))["queries"]}
+if args.holdout == "symmetric":
+    pairs = full[~full.src.isin(eval_ids) & ~full.dst.isin(eval_ids)]
+else:
+    pairs = full[~full.src.isin(eval_ids)]
+print(f"eval-condition training pairs ({args.holdout}): {len(pairs)}",
+      flush=True)
 
 embs = []
 for s in range(args.n_seeds):

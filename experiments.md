@@ -35,6 +35,9 @@ W&B project: `anime-rec`.
 | M1 | 08-30 | **milestone read** | ens towers on train_pairs_eval + reranker_ens | — | **0.496** | 0.730 | 0.820 | P@1 strong, depth weak; eval-member graph bias identified |
 | 25 | 08-30 | LLM listwise rerank | Qwen3-32B-Q4 reorders top-25, RRF fusion | 0.512 @f=.15 | — | — | — | neutral on full dev (15-q subset +0.04 was noise) |
 | 26 | 08-30 | LLM open generation | 32B nominates recs directly, title-resolve | 0.280 pure | — | — | — | ✗ Q4 can't recall MAL lists, only rank given candidates |
+| 27 | 08-30 | clean-synopsis re-embed | placeholder "No description" docs fixed | 0.468 retr | — | — | — | +0.004 ens retrieval |
+| 28 | 08-30 | extended scraped graph | +2,066 srcs ranks 200-2500 (flat pseudo-votes) | 0.42x | — | — | — | ✗ dilutes training; monotone/curated variant also ✗ (0.501) |
+| 28b | 08-30 | verdict | extended graph → product path only; training stays on ayan | — | — | — | — | product graph = 91k edges, 3,455 srcs |
 
 ## Notes
 

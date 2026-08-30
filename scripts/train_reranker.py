@@ -36,6 +36,12 @@ ap.add_argument("--union_extra", type=int, default=0,
 ap.add_argument("--out", default="reranker.txt")
 ap.add_argument("--n_seeds", type=int, default=1,
                 help="towers per fold; embeddings concatenated (mean cosine)")
+ap.add_argument("--lgbm_only", action="store_true",
+                help="skip fold towers; refit LGBM on cached rerank_dataset.npz")
+ap.add_argument("--lr", type=float, default=0.05)
+ap.add_argument("--leaves", type=int, default=63)
+ap.add_argument("--trees", type=int, default=400)
+ap.add_argument("--label_gain", default="0,1,3,7")
 args = ap.parse_args()
 
 DATA = ROOT / "data"
@@ -63,7 +69,13 @@ print(f"reranker training srcs: {len(srcs)}", flush=True)
 by_src_votes = {s: dict(zip(g.dst, g.votes)) for s, g in pairs.groupby("src")}
 Xrows, ylab, groups = [], [], []
 
-for f in range(N_FOLDS):
+DS_CACHE = DATA / "rerank_dataset.npz"
+if args.lgbm_only:
+    dc = np.load(DS_CACHE)
+    Xall, yall, groups = dc["X"], dc["y"], list(dc["groups"])
+    print(f"loaded cached dataset {Xall.shape}", flush=True)
+
+for f in range(N_FOLDS) if not args.lgbm_only else []:
     fold_srcs = {int(srcs[i]) for i in range(len(srcs)) if folds[i] == f}
     tp = train_pairs[~train_pairs.src.isin(fold_srcs)
                      & ~train_pairs.dst.isin(fold_srcs)]
@@ -98,14 +110,18 @@ for f in range(N_FOLDS):
                      else 1 if c in truth else 0 for c in cands])
         groups.append(len(cands))
 
-Xall = np.concatenate(Xrows)
-yall = np.concatenate(ylab)
-print(f"reranker dataset: {Xall.shape}, positives: {(yall > 0).mean():.2%}",
-      flush=True)
+if not args.lgbm_only:
+    Xall = np.concatenate(Xrows)
+    yall = np.concatenate(ylab)
+    np.savez(DS_CACHE, X=Xall, y=yall, groups=np.array(groups))
+    print(f"reranker dataset: {Xall.shape}, positives: "
+          f"{(yall > 0).mean():.2%}", flush=True)
 
-rk = lgb.LGBMRanker(objective="lambdarank", n_estimators=400,
-                    learning_rate=0.05, num_leaves=63, min_child_samples=20,
-                    label_gain=[0, 1, 3, 7], random_state=0, verbose=-1)
+rk = lgb.LGBMRanker(objective="lambdarank", n_estimators=args.trees,
+                    learning_rate=args.lr, num_leaves=args.leaves,
+                    min_child_samples=20,
+                    label_gain=[int(x) for x in args.label_gain.split(",")],
+                    random_state=0, verbose=-1)
 rk.fit(Xall, yall, group=groups)
 rk.booster_.save_model(str(DATA / args.out))
 imp = sorted(zip(FEATS, rk.feature_importances_), key=lambda x: -x[1])
