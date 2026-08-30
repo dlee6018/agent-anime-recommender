@@ -59,6 +59,7 @@ W&B project: `anime-rec`.
 | 41 | 08-30 | all-fresh graph retrain | towers + reranker on rec_pairs_fresh | 0.704 | — | — | — | neutral (0.709 baseline) — static graph confirmed; champion state restored; fresh graph kept for product path |
 | 42 | 08-30 | co-watch pseudo-edge aug | +9.2k cooc-lift pairs as weak positives (votes=1) | 0.360 | — | — | — | ✗✗ teaches co-watched=recommended; drowns true signal |
 | 43 | 08-30 | milestone-tower epochs | 8/10/12/15, no early stop, dev-condition | 0.684-0.697 | — | — | — | flat within noise; epochs=12 stands |
+| 44 | 08-30 | review-augmented content (user idea) | top-2 MAL review excerpts in Qwen docs, 2048 ctx, 99% coverage of pop≤4000 | 0.711 mixed / 0.703 clean | — | — | — | neutral at pipeline level (0.709 base); best single tower ever (0.452) but graph features dominate under src-only; review data kept for future strict-side work |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
