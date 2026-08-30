@@ -12,9 +12,10 @@ import urllib.request
 from pathlib import Path
 
 DATA = Path(__file__).resolve().parent.parent / "data"
-OUT = DATA / "userrecs.json"
+OUT = DATA / "userrecs_votes.json"  # {src: [[dst, votes], ...]} page order
 UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"}
 PAIR_RE = re.compile(r'href="/recommendations/anime/(\d+)-(\d+)"')
+MORE_RE = re.compile(r"by <strong>(\d+)</strong> more users")
 
 
 def fetch(url: str, tries: int = 4) -> str:
@@ -28,14 +29,18 @@ def fetch(url: str, tries: int = 4) -> str:
             time.sleep(5 + 5 * t)
 
 
-def parse_recs(html: str, mal_id: int) -> list[int]:
+def parse_recs(html: str, mal_id: int) -> list[list[int]]:
+    """[[rec_id, votes], ...] in page order (most-recommended first)."""
+    parts = re.split(r'href="/recommendations/anime/(\d+)-(\d+)"', html)
     recs, seen = [], set()
-    for a, b in PAIR_RE.findall(html):
-        a, b = int(a), int(b)
+    for i in range(1, len(parts) - 2, 3):
+        a, b, seg = int(parts[i]), int(parts[i + 1]), parts[i + 2]
         other = b if a == mal_id else a
-        if other != mal_id and other not in seen:
-            seen.add(other)
-            recs.append(other)
+        if other == mal_id or other in seen:
+            continue
+        seen.add(other)
+        m = MORE_RE.search(seg)
+        recs.append([other, (int(m.group(1)) + 1) if m else 1])
     return recs
 
 
