@@ -16,7 +16,8 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 TYPES = ["TV", "Movie", "OVA", "ONA", "Special", "Music"]
 
 
-def build_features(content_file: str = "content_emb.npz"
+def build_features(content_file: str = "content_emb.npz",
+                   use_i2v: bool = False
                    ) -> tuple[np.ndarray, np.ndarray, dict]:
     """Returns (ids, X, info) with X float32 [N, D]."""
     c = np.load(DATA / content_file)
@@ -38,7 +39,7 @@ def build_features(content_file: str = "content_emb.npz"
 
     i2v_block = np.zeros((N, 0), dtype=np.float32)
     i2v_path = DATA / "i2v_emb.npz"
-    if i2v_path.exists():
+    if use_i2v and i2v_path.exists():
         v = np.load(i2v_path)
         i2v_block = np.zeros((N, v["emb"].shape[1]), dtype=np.float32)
         for aid, row in zip(v["ids"], v["emb"]):

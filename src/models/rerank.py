@@ -31,6 +31,10 @@ class FeatureBuilder:
         cm = np.load(DATA / "cooc_meta.npz")
         self.cnt = cm["item_counts"]
         self.cooc_row_of = {int(x): i for i, x in enumerate(cm["ids"])}
+        # cooc matrix may live on a different (older/smaller) id universe
+        self.cooc_ids = cm["ids"]
+        self.cooc2uni = np.array([self.idx.get(int(x), -1)
+                                  for x in cm["ids"]], dtype=np.int64)
 
     def _align(self, src_ids, emb):
         out = np.zeros((len(self.ids), emb.shape[1]), dtype=np.float32)
@@ -47,11 +51,13 @@ class FeatureBuilder:
         co = np.asarray(self.C[crow].todense()).ravel()
         s = co / (max(self.cnt[crow], 1) ** 0.65
                   * np.maximum(self.cnt, 1) ** 0.65)
-        s[~mask] = -np.inf
-        if s_id in self.idx:
-            s[self.idx[s_id]] = -np.inf
+        valid = (self.cooc2uni >= 0) & mask[np.maximum(self.cooc2uni, 0)]
+        s[~valid] = -np.inf
+        s[crow] = -np.inf
+        n = min(n, len(s) - 1)
         top = np.argpartition(-s, n)[:n]
-        return [int(self.ids[i]) for i in top[np.argsort(-s[top])]]
+        top = top[np.argsort(-s[top])]
+        return [int(self.cooc_ids[i]) for i in top if np.isfinite(s[i])]
 
     def content_top(self, s_id: int, n: int, mask: np.ndarray) -> list[int]:
         si = self.idx.get(s_id)

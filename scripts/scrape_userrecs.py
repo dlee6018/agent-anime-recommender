@@ -40,7 +40,8 @@ def parse_recs(html: str, mal_id: int) -> list[int]:
 
 
 def main() -> None:
-    targets = json.load(open(DATA / "top200_popularity.json"))
+    tfile = sys.argv[1] if len(sys.argv) > 1 else "top200_popularity.json"
+    targets = json.load(open(DATA / tfile))
     done = json.load(open(OUT)) if OUT.exists() else {}
     for i, a in enumerate(targets):
         mid = str(a["mal_id"])

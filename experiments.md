@@ -26,6 +26,7 @@ W&B project: `anime-rec`.
 | 16 | 08-30 | tt-v5 Qwen content | Qwen3-Embedding-4B 2560d replaces bge 1024d | 0.431 | — | — | — | large embedder = biggest single lift |
 | 17 | 08-30 | tt-v6 2023 ALS | ALS-256 on 108M-row 2023 dump (317k users) | 0.441 | — | — | — | retrieval champion |
 | 18 | 08-30 | LGBM reranker | LambdaRank over tt top-80, 5-fold-honest tt feature, 14 feats | 0.489 | — | — | — | +0.048 over retrieval; recall@80=0.70 caps it |
+| 19 | 08-30 | tt-v7 + item2vec | i2v-200 block (unordered lists) | 0.435 | — | — | — | ✗ noise vs ALS-256; i2v off by default |
 
 ## Notes
 
