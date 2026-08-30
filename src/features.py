@@ -16,10 +16,11 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 TYPES = ["TV", "Movie", "OVA", "ONA", "Special", "Music"]
 
 
-def build_features() -> tuple[np.ndarray, np.ndarray, dict]:
+def build_features(content_file: str = "content_emb.npz"
+                   ) -> tuple[np.ndarray, np.ndarray, dict]:
     """Returns (ids, X, info) with X float32 [N, D]."""
-    c = np.load(DATA / "content_emb.npz")
-    ids, content = c["ids"], c["emb"]
+    c = np.load(DATA / content_file)
+    ids, content = c["ids"], c["emb"].astype(np.float32)
     idx = {int(a): i for i, a in enumerate(ids)}
     N = len(ids)
 

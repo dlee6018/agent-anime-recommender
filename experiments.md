@@ -21,7 +21,8 @@ W&B project: `anime-rec`.
 | 11 | 08-30 | neighbor-transfer | blend-space NN=60 β=4, vote transfer | 0.168 | — | — | — | weak alone (holdout caps reach at ~51%); keep as ensemble feature |
 | 12 | 08-30 | tt-v3 arch sweep | temp {.02,.05,.10}, deep 1024→384, drop .3 | ≤0.343 | — | — | — | arch is not the bottleneck |
 | 13 | 08-30 | tt-v4 enriched features | + themes/demographics multi-hot, enriched docs re-embedded (lyfesan merge), pairs re-resolved 50k→52.7k | 0.383 | — | — | — | features are the lever (+0.035) |
-| 14 | 08-30 | tt-v4b early stop | best-epoch snapshot (peak ~ep4-10) | 0.393 | — | — | — | champion; model overfits after ~ep10 |
+| 14 | 08-30 | tt-v4b early stop | best-epoch snapshot (peak ~ep4-10) | 0.393 | — | — | — | model overfits after ~ep10 |
+| 15 | 08-30 | tt-v4c lr/d_out sweep | lr 5e-4 ep50: 0.400; lr 2e-3: 0.384; d_out 512: 0.401 | 0.401 | — | — | — | champion: lr 1e-3, d_out 512 |
 
 ## Notes
 
@@ -40,6 +41,19 @@ Unsupervised similarity ≠ MAL rec lists: co-watch (ALS) surfaces "watched
 together" (Death Note → Naruto), truth wants "same vibe" (→ Code Geass,
 Monster). All models franchise-filtered (0.33% false-kill on true pairs;
 without it content-knn returns sequels). Supervision on rec pairs is the lever.
+
+### Data provenance
+- eval_set.json sha256 1d6ddd9d… (frozen 2026-08-30, 100 queries);
+  dev_set.json sha256 f141e02e… (150 queries). Both committed to git.
+- Interactions: Kaggle `dbdmobile/myanimelist-dataset` v5 `user-filtered.csv`
+  (109M rows, snapshot ~mid-2023, includes unscored watched rows). The earlier
+  `animelists_filtered.csv` (HF SiddXiao) was the **2018** azathoth dump —
+  reviewer caught the mislabel; replaced. Post-mid-2023 anime (e.g. Frieren)
+  have zero interactions → content + rec-graph must carry them.
+- Rec graph: HF `ayan4m1/myanimelist-recommendations` (scraped 2026-03).
+- Metadata: 2023 dump (synopses) + HF `lyfesan/myanimelist-top-anime-dataset`
+  (28,880 rows, ~2025, themes/demographics/producers/fresh popularity).
+- Eval ground truth: direct MAL userrecs scrape 2026-08-30.
 
 ### Data (Phase 0, 2026-08-30)
 - Rec graph: `ayan4m1/myanimelist-recommendations` (HF, scraped 2026-03), parsed

@@ -21,7 +21,10 @@ def load_eval_set() -> dict[int, list[int]]:
 
 def evaluate(recommend_fn, eval_set: dict[int, list[int]] | None = None,
              k: int = 5) -> dict:
-    eval_set = eval_set or load_eval_set()
+    if eval_set is None:
+        eval_set = load_eval_set()
+    if not eval_set:
+        raise ValueError("empty eval set")
     per_query = {}
     for q, truth in eval_set.items():
         truth10 = set(truth[:10])

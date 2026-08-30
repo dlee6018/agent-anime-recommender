@@ -18,29 +18,28 @@ DATA = ROOT / "data"
 ids = np.load(DATA / "content_emb.npz")["ids"]
 item_idx = {int(a): i for i, a in enumerate(ids)}
 
-print("scanning big CSV...", flush=True)
+KAGGLE = Path("/home/ubuntu/.cache/kagglehub/datasets/dbdmobile/"
+              "myanimelist-dataset/versions/5")
+
+print("scanning user-filtered.csv (2023 dump, 109M rows)...", flush=True)
 lf = (
-    pl.scan_csv(DATA / "raw" / "animelists_filtered.csv",
-                schema_overrides={"my_score": pl.Int32, "my_status": pl.Int32,
-                                  "my_last_updated": pl.Int64})
-    .select(["username", "anime_id", "my_score", "my_status",
-             "my_last_updated"])
-    .filter((pl.col("my_status").is_in([1, 2]) | (pl.col("my_score") > 0))
-            & pl.col("anime_id").is_in(list(item_idx)))
+    pl.scan_csv(KAGGLE / "user-filtered.csv",
+                schema_overrides={"rating": pl.Int32})
+    .filter(pl.col("anime_id").is_in(list(item_idx)))
 )
-df = lf.collect(streaming=True)
+df = lf.collect(engine="streaming")
 print(f"kept rows: {len(df)}", flush=True)
 
-counts = df.group_by("username").len()
-good = counts.filter(pl.col("len") >= 5)["username"]
-df = df.filter(pl.col("username").is_in(good))
-print(f">=5 filter: {len(df)} rows, {df['username'].n_unique()} users",
+counts = df.group_by("user_id").len()
+good = counts.filter(pl.col("len") >= 5)["user_id"]
+df = df.filter(pl.col("user_id").is_in(good))
+print(f">=5 filter: {len(df)} rows, {df['user_id'].n_unique()} users",
       flush=True)
 
-uid = (df["username"].rank("dense") - 1).to_numpy().astype(np.int64)
+uid = (df["user_id"].rank("dense") - 1).to_numpy().astype(np.int64)
 iid = np.array([item_idx[a] for a in df["anime_id"].to_numpy()],
                dtype=np.int64)
-score = df["my_score"].to_numpy().astype(np.float32)
+score = df["rating"].to_numpy().astype(np.float32)
 weight = 1.0 + np.clip(score, 0, 10) / 10.0
 mat = sp.csr_matrix((weight, (uid, iid)),
                     shape=(int(uid.max()) + 1, len(ids)))
@@ -56,9 +55,8 @@ item_ids, emb = train_als(factors=256, iterations=25)
 save_als(item_ids, emb)
 print("ALS saved", flush=True)
 
-print("item2vec sequences...", flush=True)
-seq_df = (df.sort(["username", "my_last_updated"])
-          .group_by("username", maintain_order=True)
+print("item2vec sequences (no timestamps; list order)...", flush=True)
+seq_df = (df.group_by("user_id", maintain_order=True)
           .agg(pl.col("anime_id")))
 sentences = [[str(a) for a in row] for row in seq_df["anime_id"].to_list()]
 del df, seq_df

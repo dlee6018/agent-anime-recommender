@@ -1,4 +1,8 @@
 data/
+!data/eval_set.json
+!data/dev_set.json
+!data/userrecs.json
+!data/top200_popularity.json
 .venv/
 __pycache__/
 wandb/

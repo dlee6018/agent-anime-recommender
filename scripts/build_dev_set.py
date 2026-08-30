@@ -34,8 +34,6 @@ for s in dev_ids:
 json.dump({"queries": dev}, open(DATA / "dev_set.json", "w"), indent=1)
 print(f"dev set: {len(dev)} queries")
 
-held = eval_ids | set(dev_ids)
-before = len(pairs)
-train = pairs[~pairs.src.isin(held) & ~pairs.dst.isin(held)]
-train.to_parquet(DATA / "train_pairs.parquet")
-print(f"train pairs after eval+dev holdout: {before} -> {len(train)}")
+# NOTE: train-pair holdout files are written ONLY by build_enriched_meta.py
+# (single-writer rule; a build_eval_set.py rerun once silently restored
+# dev edges into training).

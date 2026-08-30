@@ -1,27 +1,21 @@
-"""Embed anime content text (title/genres/studios/synopsis) on GPU.
+"""Embed enriched content docs with Qwen3-Embedding-4B (2560d) on GPU.
 
-Output: data/content_emb.npz  (ids: int64[N], emb: float32[N, D], model name)
-Universe: anime with a synopsis and popularity rank <= 12000 (covers every
-plausible recommendation target while skipping the deep long tail).
+Output: data/content_emb_qwen.npz — same id universe as content_emb.npz.
 """
 import sys
 from pathlib import Path
 
 import numpy as np
+import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.data import load_metadata, year_of  # noqa: E402
 
-MODEL = "BAAI/bge-large-en-v1.5"
-MAX_POP_RANK = 13000
+MODEL = "Qwen/Qwen3-Embedding-4B"
+DATA = Path(__file__).resolve().parent.parent / "data"
 
+ids = [int(a) for a in np.load(DATA / "content_emb.npz")["ids"]]
 meta = load_metadata()
-ids = sorted(
-    a for a, m in meta.items()
-    if (m["popularity"] and m["popularity"] <= MAX_POP_RANK)
-    and (len(m["synopsis"] or "") > 40 or m["genres"] or m["themes"])
-)
-print(f"embedding {len(ids)} anime with {MODEL}", flush=True)
 
 texts = []
 for a in ids:
@@ -29,8 +23,7 @@ for a in ids:
     parts = [m["name"]]
     if m["english"] and m["english"] != m["name"]:
         parts.append(m["english"])
-    y = year_of(a)
-    parts.append(f"({m['type']}, {y or 'unknown year'})")
+    parts.append(f"({m['type']}, {year_of(a) or 'unknown year'})")
     if m["genres"]:
         parts.append("Genres: " + ", ".join(m["genres"]))
     if m["themes"]:
@@ -47,10 +40,14 @@ for a in ids:
 
 from sentence_transformers import SentenceTransformer  # noqa: E402
 
-model = SentenceTransformer(MODEL, device="cuda")
-emb = model.encode(texts, batch_size=128, show_progress_bar=True,
+model = SentenceTransformer(
+    MODEL, device="cuda",
+    model_kwargs={"torch_dtype": torch.float16},
+    tokenizer_kwargs={"padding_side": "left"},
+)
+model.max_seq_length = 1024
+emb = model.encode(texts, batch_size=16, show_progress_bar=True,
                    normalize_embeddings=True, convert_to_numpy=True)
-out = Path(__file__).resolve().parent.parent / "data" / "content_emb.npz"
-np.savez(out, ids=np.array(ids, dtype=np.int64),
-         emb=emb.astype(np.float32), model=MODEL)
-print(f"saved {out}: {emb.shape}", flush=True)
+np.savez(DATA / "content_emb_qwen.npz", ids=np.array(ids, dtype=np.int64),
+         emb=emb.astype(np.float16), model=MODEL)
+print(f"saved: {emb.shape}", flush=True)

@@ -39,13 +39,18 @@ ap.add_argument("--asym", action="store_true")
 ap.add_argument("--maxrank", type=int, default=700,
                 help="candidate mask + hard-negative pool: pop rank cutoff")
 ap.add_argument("--pop_weight", type=float, default=0.15)
+ap.add_argument("--content", default="content_emb.npz",
+                help="content embedding file (e.g. content_emb_qwen.npz)")
+ap.add_argument("--pairs", default="train_pairs.parquet",
+                help="training pair file (train_pairs_eval.parquet for "
+                     "milestone eval reads)")
 ap.add_argument("--name", default="two-tower")
 ap.add_argument("--no_eval", action="store_true",
                 help="dev only; don't touch the frozen eval set")
 args = ap.parse_args()
 
-ids, X, info = build_features()
-pairs = pd.read_parquet(ROOT / "data" / "train_pairs.parquet")
+ids, X, info = build_features(args.content)
+pairs = pd.read_parquet(ROOT / "data" / args.pairs)
 print(f"features {X.shape}, train pairs {len(pairs)}", flush=True)
 
 meta = load_metadata()

@@ -32,10 +32,3 @@ out = {"frozen": date.today().isoformat(), "min_recs": MIN_RECS,
 json.dump(out, open(DATA / "eval_set.json", "w"), indent=1)
 print(f"eval set frozen: {len(queries)} queries")
 
-eval_ids = {int(q) for q in queries}
-pairs = pd.read_parquet(DATA / "rec_pairs.parquet")
-before = len(pairs)
-pairs = pairs[~pairs.src.isin(eval_ids) & ~pairs.dst.isin(eval_ids)]
-pairs.to_parquet(DATA / "train_pairs.parquet")
-print(f"train pairs: {before} -> {len(pairs)} "
-      f"({before - len(pairs)} edges incident to eval anime removed)")
