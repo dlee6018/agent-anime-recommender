@@ -38,6 +38,9 @@ W&B project: `anime-rec`.
 | 27 | 08-30 | clean-synopsis re-embed | placeholder "No description" docs fixed | 0.468 retr | — | — | — | +0.004 ens retrieval |
 | 28 | 08-30 | extended scraped graph | +2,066 srcs ranks 200-2500 (flat pseudo-votes) | 0.42x | — | — | — | ✗ dilutes training; monotone/curated variant also ✗ (0.501) |
 | 28b | 08-30 | verdict | extended graph → product path only; training stays on ayan | — | — | — | — | product graph = 91k edges, 3,455 srcs |
+| 29 | 08-30 | reranker_ens4 | clean embs + ayan-only pairs + 18 feats | 0.524 | — | — | — | dev champion |
+| M2 | 08-30 | **milestone-2 strict** | symmetric holdout (no edge touches eval anime) | — | **0.508** | 0.700 | 0.808 | official protocol number |
+| M2b | 08-30 | **milestone-2 src-only** | only eval anime's own lists hidden; reverse edges visible | — | **0.640** | 0.830 | 0.902 | the literal "never saw its rec page" protocol; booster still symmetric-trained → retrain next |
 
 ## Notes
 

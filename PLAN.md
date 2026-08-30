@@ -10,6 +10,11 @@ list, averaged over ~100 held-out popular query anime. Iterate via /goal until m
   prediction), but ~100 eval anime are held out — ALL rec edges incident to an
   eval anime are removed from training (the graph is symmetric: an edge from
   Code Geass → Death Note leaks Death Note even if Death Note is the eval item).
+  - 2026-08-30 update: two defensible readings of "never saw rec-pairs for the
+    eval anime" are now measured at every milestone — `symmetric` (strict, the
+    above) and `src_only` (only the eval anime's own list hidden; reverse
+    edges from other lists stay visible). M2: 0.508 strict / 0.640 src-only.
+    User to confirm which one the 0.80 goal refers to; pursuing both.
 - **Eval set:** ~100 popular anime, each with a well-voted MAL rec list
   (≥10 distinct recommendations). Metric: mean precision@5 vs each anime's
   top-10 recs by vote count. Also track precision@1, recall@10, MRR.

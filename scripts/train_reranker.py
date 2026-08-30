@@ -42,6 +42,10 @@ ap.add_argument("--lr", type=float, default=0.05)
 ap.add_argument("--leaves", type=int, default=63)
 ap.add_argument("--trees", type=int, default=400)
 ap.add_argument("--label_gain", default="0,1,3,7")
+ap.add_argument("--holdout", choices=["symmetric", "src_only"],
+                default="symmetric",
+                help="fold/dev edge-removal mode; must match the eval "
+                     "protocol the booster will serve")
 args = ap.parse_args()
 
 DATA = ROOT / "data"
@@ -58,7 +62,13 @@ pop = np.array([(meta.get(int(a), {}).get("popularity") or 99999)
 retrieve_mask = pop <= MAXRANK_RETRIEVE
 
 pairs = pd.read_parquet(DATA / "rec_pairs.parquet")  # full graph for labels
-train_pairs = pd.read_parquet(DATA / "train_pairs.parquet")
+eval_ids_ = {int(q) for q in json.load(open(DATA / "eval_set.json"))["queries"]}
+dev_ids_ = {int(q) for q in json.load(open(DATA / "dev_set.json"))["queries"]}
+held_ = eval_ids_ | dev_ids_
+if args.holdout == "symmetric":
+    train_pairs = pairs[~pairs.src.isin(held_) & ~pairs.dst.isin(held_)]
+else:
+    train_pairs = pairs[~pairs.src.isin(held_)]
 
 counts = train_pairs.groupby("src").size()
 srcs = [s for s in counts[counts >= 8].index if int(s) in idx]
@@ -77,8 +87,11 @@ if args.lgbm_only:
 
 for f in range(N_FOLDS) if not args.lgbm_only else []:
     fold_srcs = {int(srcs[i]) for i in range(len(srcs)) if folds[i] == f}
-    tp = train_pairs[~train_pairs.src.isin(fold_srcs)
-                     & ~train_pairs.dst.isin(fold_srcs)]
+    if args.holdout == "symmetric":
+        tp = train_pairs[~train_pairs.src.isin(fold_srcs)
+                         & ~train_pairs.dst.isin(fold_srcs)]
+    else:
+        tp = train_pairs[~train_pairs.src.isin(fold_srcs)]
     print(f"fold {f}: tower on {len(tp)} pairs", flush=True)
     embs = []
     for s in range(args.n_seeds):
