@@ -56,6 +56,7 @@ W&B project: `anime-rec`.
 | 38 | 08-30 | product-path dev validation | graph-priority recommender vs dev truth | **0.948** | — | — | — | product ordering (ayan votes + pseudo-votes) ≈ crowd truth |
 | 39 | 08-30 | bagged LGBM ×3 | subsample .8, colsample .85, avg scores | 0.708 | — | — | — | neutral; reranker_srconly7 reproduces 0.709 (stability ✓) |
 | 40 | 08-30 | fresh-vote rescrape | per-pair votes parsed from userrecs HTML | — | — | — | — | fresh ≈ March: log-corr 0.99, top-10 overlap 0.966 → graph static; only value = real votes for 558 pseudo-vote srcs |
+| 41 | 08-30 | all-fresh graph retrain | towers + reranker on rec_pairs_fresh | 0.704 | — | — | — | neutral (0.709 baseline) — static graph confirmed; champion state restored; fresh graph kept for product path |
 
 ## Status (end of session 1, 2026-08-30 ~08:00 UTC)
 - **Product path** (`recommend.py`, model `best`): graph-priority + ML fallback.

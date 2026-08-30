@@ -46,6 +46,8 @@ ap.add_argument("--holdout", choices=["symmetric", "src_only"],
                 default="symmetric",
                 help="fold/dev edge-removal mode; must match the eval "
                      "protocol the booster will serve")
+ap.add_argument("--pairs_file", default="rec_pairs.parquet",
+                help="full rec graph used for labels + holdout filtering")
 args = ap.parse_args()
 
 DATA = ROOT / "data"
@@ -61,7 +63,7 @@ pop = np.array([(meta.get(int(a), {}).get("popularity") or 99999)
                 for a in ids])
 retrieve_mask = pop <= MAXRANK_RETRIEVE
 
-pairs = pd.read_parquet(DATA / "rec_pairs.parquet")  # full graph for labels
+pairs = pd.read_parquet(DATA / args.pairs_file)  # full graph for labels
 eval_ids_ = {int(q) for q in json.load(open(DATA / "eval_set.json"))["queries"]}
 dev_ids_ = {int(q) for q in json.load(open(DATA / "dev_set.json"))["queries"]}
 held_ = eval_ids_ | dev_ids_
