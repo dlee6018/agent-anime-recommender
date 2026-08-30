@@ -113,13 +113,9 @@ for f in range(N_FOLDS) if not args.lgbm_only else []:
         cands = [int(ids[i]) for i in top]
         if args.union_extra:
             seen = set(cands)
-            from src.franchise import same_franchise as _sf
-            fam_in = list(fb.in_lists.get(s_id, ()))
-            for sib in list(fb.in_lists):
-                if sib != s_id and _sf(sib, s_id):
-                    fam_in.extend(fb.in_lists[sib])
-            in_nbrs = [x for x, _ in sorted(fam_in, key=lambda t: -t[1])
-                       [:args.union_extra * 2]]
+            in_nbrs = [x for x, _ in sorted(fb.in_lists.get(s_id, ()),
+                                            key=lambda t: -t[1])
+                       [:args.union_extra]]
             for extra in (in_nbrs,
                           fb.cooc_top(s_id, args.union_extra, retrieve_mask),
                           fb.content_top(s_id, args.union_extra,

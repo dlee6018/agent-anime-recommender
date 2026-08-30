@@ -41,6 +41,13 @@ W&B project: `anime-rec`.
 | 29 | 08-30 | reranker_ens4 | clean embs + ayan-only pairs + 18 feats | 0.524 | — | — | — | dev champion |
 | M2 | 08-30 | **milestone-2 strict** | symmetric holdout (no edge touches eval anime) | — | **0.508** | 0.700 | 0.808 | official protocol number |
 | M2b | 08-30 | **milestone-2 src-only** | only eval anime's own lists hidden; reverse edges visible | — | **0.640** | 0.830 | 0.902 | the literal "never saw its rec page" protocol; booster still symmetric-trained → retrain next |
+| M3 | 08-30 | src-only matched booster | fold holdout = src_only | — | **0.696** | 0.860 | 0.921 | feature-distribution match pays |
+| 30 | 08-30 | rev_edge + colist feats | reverse edge (cand→q) + third-party co-listing | 0.700 int | — | — | — | killer features under src-only (91% edge symmetry) |
+| M4 | 08-30 | + rev_edge/colist | src-only | — | **0.778** | 0.910 | 0.945 | |
+| M5 | 08-30 | wide retrieval | maxrank 8000 (truth p99≈7100), top200, union80, 5-seed eval towers | — | **0.784** | 0.920 | 0.958 | |
+| 31 | 08-30 | LGBM sweep | label_gain 0,1,5,13 best of 3 | 0.709 int | — | — | — | marginal |
+| 32 | 08-30 | rev_fam + fam-union ×2 | 3 changes at once | 0.693 int | 0.758 | — | — | ✗ regression; lesson: one variable at a time |
+| 33 | 08-30 | rev_fam isolated / fam-collapsed q_in | | 0.709 / 0.601 int | 0.774 | — | — | rev_fam ~neutral; q_in collapse ✗✗ (base queries inherit sequel noise) |
 
 ## Notes
 

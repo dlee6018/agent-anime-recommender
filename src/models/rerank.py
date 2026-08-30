@@ -56,6 +56,7 @@ class FeatureBuilder:
         for milestone reads)."""
         self.out_lists: dict[int, list[tuple[int, float]]] = {}
         self.in_lists: dict[int, list[tuple[int, float]]] = {}
+        self._fam_cache = {}  # family lookups depend on graph nodes
         for s, g in pairs.groupby("src"):
             v = np.log1p(g.votes.to_numpy().astype(np.float32))
             v /= v.sum() + 1e-9
@@ -106,6 +107,16 @@ class FeatureBuilder:
         top = np.argpartition(-s, n)[:n]
         return [int(self.ids[i]) for i in top[np.argsort(-s[top])]]
 
+    def _family(self, aid: int) -> list[int]:
+        """Franchise siblings of aid among graph nodes (cached)."""
+        if not hasattr(self, "_fam_cache"):
+            self._fam_cache: dict[int, list[int]] = {}
+        if aid not in self._fam_cache:
+            self._fam_cache[aid] = [
+                s for s in self.in_lists
+                if s != aid and same_franchise(s, aid)]
+        return self._fam_cache[aid]
+
     def season_idx(self, aid: int) -> int:
         m = self.meta.get(aid)
         if not m:
@@ -130,6 +141,8 @@ class FeatureBuilder:
         # under src_only holdout the query's IN-edges are visible:
         # rev_edge = weight of (cand -> query); colist = query & cand
         # co-occurring in third-party lists. Both are 0 under symmetric.
+        # (franchise-collapsed q_in was tried and reverted — exp 33: base
+        # queries inherit noisy sequel in-edges, dev 0.709 -> 0.601)
         q_in = {s: w for s, w in self.in_lists.get(s_id, ())}
         out = []
         for c_id in cands:
@@ -206,13 +219,8 @@ def make_rerank_recommender(ids: np.ndarray, tt_emb: np.ndarray,
             s_dom = min(query_ids, key=lambda q: meta.get(q, {})
                         .get("popularity") or 10**9)
             seen = set(cands)
-            fam_in = list(fb.in_lists.get(s_dom, ()))
-            from ..franchise import same_franchise as _sf
-            for sib in list(fb.in_lists):
-                if sib != s_dom and _sf(sib, s_dom):
-                    fam_in.extend(fb.in_lists[sib])
-            in_nbrs = [s for s, _ in sorted(fam_in, key=lambda x: -x[1])
-                       [:union_extra * 2]]
+            in_nbrs = [s for s, _ in sorted(fb.in_lists.get(s_dom, ()),
+                                            key=lambda x: -x[1])[:union_extra]]
             for extra in (in_nbrs,
                           fb.cooc_top(s_dom, union_extra, rmask),
                           fb.content_top(s_dom, union_extra, rmask)):
