@@ -48,6 +48,21 @@ W&B project: `anime-rec`.
 | 31 | 08-30 | LGBM sweep | label_gain 0,1,5,13 best of 3 | 0.709 int | — | — | — | marginal |
 | 32 | 08-30 | rev_fam + fam-union ×2 | 3 changes at once | 0.693 int | 0.758 | — | — | ✗ regression; lesson: one variable at a time |
 | 33 | 08-30 | rev_fam isolated / fam-collapsed q_in | | 0.709 / 0.601 int | 0.774 | — | — | rev_fam ~neutral; q_in collapse ✗✗ (base queries inherit sequel noise) |
+| M8 | 08-30 | **final dev-selected read** | reranker_srconly5 (dev champion), 7-seed towers | 0.709 | **0.778** | **0.940** | **0.970** | src-only protocol; strict symmetric = 0.508 (M2) |
+| 34 | 08-30 | sequel query-emb expansion | 0.6·q + 0.4·base emb | 0.683 | — | — | — | ✗ |
+| 35 | 08-30 | output-level RRF fusion | pipeline + cooc + content ranks | ≤0.708 | — | — | — | ✗ LGBM already absorbs these signals |
+
+## Status (end of session 1, 2026-08-30 ~08:00 UTC)
+- **Product path** (`recommend.py`, model `best`): graph-priority + ML fallback.
+  Reproduces MAL top-10 essentially exactly for listed anime (oracle P@5=1.0);
+  Death Note → Code Geass/Monster/Zankyou ✓ (user's acceptance example).
+- **ML generalization**: src-only holdout **0.778** / strict symmetric **0.508**
+  vs the 0.80 goal. Remaining failure class: sequels of eval-member franchises.
+- **Open decision for user**: which protocol the 0.80 bar refers to
+  (strict / src-only / product). See PLAN.md eval-rigor note.
+- Next ideas: fresh vote parsing on scraped pages (sharpen rev_edge weights),
+  official MAL API (needs user's client id), LLM rerank with rich prompts,
+  bagged LGBM, retry 234 failed extended scrapes.
 
 ## Notes
 
