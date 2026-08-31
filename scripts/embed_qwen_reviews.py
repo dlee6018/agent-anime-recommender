@@ -63,6 +63,7 @@ model = SentenceTransformer(
 model.max_seq_length = 2048
 emb = model.encode(texts, batch_size=8, show_progress_bar=True,
                    normalize_embeddings=True, convert_to_numpy=True)
+# fp16 on disk (halves the file); build_features upcasts to fp32 on load
 np.savez(DATA / "content_emb_qwen_rev.npz",
          ids=np.array(ids, dtype=np.int64),
          emb=emb.astype(np.float16), model=MODEL + "+reviews")

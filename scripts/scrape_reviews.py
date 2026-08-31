@@ -22,7 +22,9 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
 N_REVIEWS = 3
 MAX_CHARS = 1400
 
-TEXT_RE = re.compile(r'class="text">(.*?)</div>', re.S)
+# take a generous raw slice after the marker rather than stopping at the
+# first </div> — review bodies contain nested divs (reviewer #2, item 1)
+TEXT_RE = re.compile(r'class="text">(.{200,8000}?)(?:</div>\s*</div>|$)', re.S)
 TAG_RE = re.compile(r"<[^>]+>")
 
 
@@ -64,7 +66,8 @@ for n, aid in enumerate(todo):
     m = meta[aid]
     slug = re.sub(r"[^A-Za-z0-9_]+", "_", m["name"])[:60] or "x"
     html = fetch(f"https://myanimelist.net/anime/{aid}/{slug}/reviews")
-    done[str(aid)] = parse(html) if html else []
+    # None = retryable fetch failure; [] = page fetched, no usable reviews
+    done[str(aid)] = parse(html) if html else None
     if n % 25 == 24 or n == len(todo) - 1:
         json.dump(done, open(OUT, "w"))
     if n % 100 == 99:

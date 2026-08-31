@@ -3,6 +3,37 @@
 Independent hourly review of the recommender agent's work. Each entry: what
 exists / what changed since last check, bugs, risks, and feedback. Newest first.
 
+## 2026-08-31 ~19:55 UTC — Review #2 (covers 19:45 08-30 → now; session suspension again blocked hourly fires — OS-cron fallback proposed to user, NOT yet installed)
+
+### State / progress
+- Agent idle since 23:50 08-30 (~20h) — apparently blocked on the user's protocol decision (strict vs src-only). 5 commits since review #1; tree clean; 53 W&B runs; tests 9/9 passing; serve.py still up on 127.0.0.1:8501. Disk 95% (7.5GB free, −0.5GB).
+- Numbers unchanged: **strict 0.508** (headline, per spec) / src-only 0.778 / dev-strict ceiling ~0.51–0.52. Agent's conclusion after exps 44–45: **strict is saturated with available signals**.
+
+### Changed since last check
+- `e26fc84` — full response to review #1, all verified (see below).
+- New idea (credited to the user's "synopses are spoiler-free ep-1 blurbs; reviews describe what a show becomes" insight): `scripts/scrape_reviews.py` (top-3 MAL review excerpts, 2.2s delay, resumable, 15MB reviews.json, 99% coverage of pop≤4000) + `scripts/embed_qwen_reviews.py` (metadata header + trimmed synopsis + 2 excerpts, 2048 ctx, fp16) + `--content` flag on train_reranker.
+- Exp 44: review-augmented embeddings — best single tower ever (dev 0.452 vs ~0.43) but pipeline-neutral (0.711 vs 0.709) since graph features dominate under src-only. Exp 45: review content + wide retrieval + 21 feats under **symmetric** holdout → dev 0.515 vs 0.524 baseline → correctly declined to burn an eval read. Both logged as negatives with reasoning — good discipline.
+
+### Bugs / blockers (all minor this hour)
+1. `scripts/scrape_reviews.py:25` — `class="text">(.*?)</div>` truncates at the first *nested* `</div>` inside a review body; excerpts may be silently short. Works in practice (>100-char filter), but a tighter parse or a `[:MAX]` on the raw block would be safer.
+2. `scripts/scrape_reviews.py:67` — failed fetches are cached permanently as `[]`, indistinguishable from "anime has no reviews"; userrecs scraper used `None` for retryable failures. Rescrape requires knowing which keys to delete.
+3. `embed_qwen_reviews.py:145` stores fp16 while every other emb table is fp32 — handled by downstream `.astype(np.float32)`, but an unannotated precision mix.
+4. Awareness note, not a violation: MAL review excerpts sometimes name-drop other anime ("better than X") — that is legitimate public content-side data (the ground truth is the *userrecs page*, which stays held out), but it moves content features slightly toward crowd-rec territory. Fine under the spec; worth remembering when interpreting content-tower gains.
+
+### Status of previously reported issues
+All six review-#1 items closed properly, verified empirically:
+- gitignore negation fixed (`data/` → `data/*`); eval/dev/userrecs/config genuinely tracked (`git ls-files` ✓), eval sha unchanged 1d6ddd9d ✓ (frozen set preserved).
+- README headline reconciled to **strict 0.508, goal not met**, src-only explicitly labeled as leaky/relaxed ✓. M5's bogus "p99≈7100" rationale corrected in-place ✓; exp 38 relabeled "oracle-on-itself, NOT a generalization result" ✓. Provenance note now documents the false-"committed" history instead of hiding it ✓.
+- Franchise/title-resolution tests added (9 total) ✓; serve.py predict behind a lock ✓.
+- "234 failed extended scrapes" investigated: genuinely empty rec lists, nothing to retry ✓.
+- 19GB gguf: kept deliberately per user's own "prob don't delete the qwen stuff" — overrides reviewer #1's deletion suggestion; decision is the user's, disk remains the cost (95%).
+
+### Engineering-bar feedback
+Exemplary review response — every finding fixed at the root (not papered over), histories documented honestly, and the discipline of refusing an eval read for a non-improving strict variant is exactly right. Remaining asks: (1) the protocol decision has now blocked progress ~20h — the agent should surface it louder (it pinged once); the user must answer: is the 0.80 bar strict, src-only, or product-path? (2) disk 95% with fp16 embedding tables accumulating — prune superseded tt_* checkpoints (~20 files × 27MB) if space is wanted without touching the gguf. (3) hourly reviewer notifications remain session-bound until the user installs the offered OS crontab line.
+
+### Next check
+- User's protocol ruling; any resumed work (strict-side ideas: better co-watch models, 2-hop-only features, LLM-free); disk; whether OS cron got installed.
+
 ## 2026-08-30 ~19:45 UTC — Review #1 (covers 01:10 → 19:45; session was suspended ~01:15–19:29 so hourly reviews could not fire)
 
 ### State / progress
