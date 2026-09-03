@@ -23,7 +23,7 @@ from src.evaluate import evaluate  # noqa: E402
 from src.features import build_features  # noqa: E402
 from src.franchise import with_franchise_filter  # noqa: E402
 from src.models import two_tower as tt  # noqa: E402
-from src.models.rerank import (FEATS, FeatureBuilder,  # noqa: E402
+from src.models.rerank import (FEATS_BASE, FEATS_ANILIST, FeatureBuilder,  # noqa: E402
                                make_rerank_recommender)
 
 import argparse
@@ -151,6 +151,7 @@ rk = lgb.LGBMRanker(objective="lambdarank", n_estimators=args.trees,
                     random_state=0, verbose=-1)
 rk.fit(Xall, yall, group=groups)
 rk.booster_.save_model(str(DATA / args.out))
+FEATS = FEATS_BASE + (FEATS_ANILIST if fb.al_out else [])
 imp = sorted(zip(FEATS, rk.feature_importances_), key=lambda x: -x[1])
 print("feature importance:", imp, flush=True)
 

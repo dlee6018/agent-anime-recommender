@@ -10,12 +10,13 @@ from ..franchise import same_franchise
 
 DATA = Path(__file__).resolve().parent.parent.parent / "data"
 
-FEATS = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
-         "genre_jac", "year_gap", "cand_logpop", "src_logpop", "type_match",
-         "cand_season", "src_season", "studio_match", "cand_score",
-         "transfer_in", "nbr_out", "cand_has_graph", "cand_age",
-         "rev_edge", "colist", "rev_fam",
-         "al_rec", "al_rev", "al_rank"]
+FEATS_BASE = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
+              "genre_jac", "year_gap", "cand_logpop", "src_logpop",
+              "type_match", "cand_season", "src_season", "studio_match",
+              "cand_score", "transfer_in", "nbr_out", "cand_has_graph",
+              "cand_age", "rev_edge", "colist", "rev_fam"]
+FEATS_ANILIST = ["al_rec", "al_rev", "al_rank"]
+FEATS = FEATS_BASE + FEATS_ANILIST  # full set; rows() gates the al block
 
 SEASON_RE = re.compile(
     r"(?:(\d)(?:nd|rd|th) season|season (\d)|part (\d)|\b(ii|iii|iv)\b)", re.I)
@@ -76,6 +77,8 @@ class FeatureBuilder:
         self.al_out = {}
         self.al_in = {}
         for s_, lst in recs.items():
+            if not lst:
+                continue  # empty (unscraped/unknown) — do not enable al block
             s_ = int(s_)
             out = [(int(d), float(r)) for d, r in lst]
             self.al_out[s_] = out
@@ -83,10 +86,16 @@ class FeatureBuilder:
                 self.al_in.setdefault(d, {})[s_] = float(r)
 
     def graph_feats(self, cand: int, tt_q: np.ndarray,
-                    tt_emb: np.ndarray) -> tuple[float, float]:
-        """(transfer_in, nbr_out) for one candidate vs the query embedding."""
+                    tt_emb: np.ndarray, exclude_src: int = -1
+                    ) -> tuple[float, float]:
+        """(transfer_in, nbr_out) for one candidate vs the query embedding.
+        exclude_src: the query id — its own out-edge (query->cand) must not
+        count toward transfer_in (training folds never saw self-edges, and
+        serving must match the held-out condition)."""
         tin = 0.0
         for s, wt in self.in_lists.get(cand, ()):
+            if s == exclude_src:
+                continue
             sim = float(tt_q @ tt_emb[self.idx[s]])
             if sim > 0:
                 tin += (sim ** 3) * wt
@@ -173,7 +182,9 @@ class FeatureBuilder:
                 con = float(co[cj])
                 lift = con / (max(self.cnt[crow], 1) ** 0.65
                               * max(self.cnt[cj], 1) ** 0.65)
-            tin, nout = self.graph_feats(int(c_id), tt_q, tt_emb)
+            tin, nout = self.graph_feats(int(c_id), tt_q, tt_emb,
+                                         exclude_src=s_id)
+            row = None
             has_graph = float(int(c_id) in self.in_lists
                               or int(c_id) in self.out_lists)
             rev = q_in.get(int(c_id), 0.0)
@@ -190,7 +201,7 @@ class FeatureBuilder:
             for d, wt in self.out_lists.get(int(c_id), ()):
                 if wt > rev_fam and same_franchise(d, s_id):
                     rev_fam = wt
-            out.append([
+            row = [
                 float(tt_q @ tt_emb[ci]),
                 float(self.CEMB[si] @ self.CEMB[ci]),
                 float(self.AEMB[si] @ self.AEMB[ci]),
@@ -206,11 +217,15 @@ class FeatureBuilder:
                 tin, nout,
                 has_graph, float(2026 - (year_of(int(c_id)) or 2005)),
                 rev, colist, rev_fam,
-                np.log1p(al_pos.get(int(c_id), (0, 0.0))[1]),
-                np.log1p(self.al_in.get(int(c_id), {}).get(s_id, 0.0)),
-                1.0 / (al_pos[int(c_id)][0] + 1) if int(c_id) in al_pos
-                else 0.0,
-            ])
+            ]
+            if self.al_out:  # AniList features only when the graph is loaded
+                row += [
+                    np.log1p(al_pos.get(int(c_id), (0, 0.0))[1]),
+                    np.log1p(self.al_in.get(int(c_id), {}).get(s_id, 0.0)),
+                    1.0 / (al_pos[int(c_id)][0] + 1) if int(c_id) in al_pos
+                    else 0.0,
+                ]
+            out.append(row)
         return np.array(out, dtype=np.float32)
 
 
