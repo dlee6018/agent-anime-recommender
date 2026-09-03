@@ -12,3 +12,4 @@ wandb/
 *.faiss
 serve.log
 nohup.out
+models/

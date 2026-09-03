@@ -27,6 +27,7 @@ ap.add_argument("--n_cand", type=int, default=30)
 ap.add_argument("--eval_set", default="data/dev_set.json")
 ap.add_argument("--graph", default="data/train_pairs_srconly_dev.parquet")
 ap.add_argument("--booster", default="data/reranker_final.txt")
+ap.add_argument("--weights", default="0.0,0.2,0.4,0.6,0.8,1.0")
 args = ap.parse_args()
 
 meta = load_metadata()
@@ -73,7 +74,7 @@ for q in ev:
                       show_progress_bar=False)
     scores_by_q[q] = 1 / (1 + np.exp(-np.asarray(sc)))
 
-for w in [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]:
+for w in [float(x) for x in args.weights.split(",")]:
     def rec(qids, k, w=w):
         q = qids[0]
         cands, xs = cands_by_q[q], scores_by_q[q]
