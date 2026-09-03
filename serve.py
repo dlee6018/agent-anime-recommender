@@ -35,7 +35,7 @@ from src.franchise import with_franchise_filter
 
 _ids, _X, _ = build_features("content_emb_qwen.npz")
 _emb = np.load(Path(__file__).parent / "data" / "tt_ens_emb.npz")["emb"].astype(np.float32)
-_booster = lgb.Booster(model_file=str(Path(__file__).parent / "data" / "reranker_anilist.txt"))
+_booster = lgb.Booster(model_file=str(Path(__file__).parent / "data" / "reranker_union.txt"))
 _pairs = pd.read_parquet(Path(__file__).parent / "data" / "rec_pairs_fresh.parquet")
 _fb = FeatureBuilder(_ids)  # shared; set_graph swapped under REC_LOCK
 _al = Path(__file__).parent / "data" / "anilist_recs.json"

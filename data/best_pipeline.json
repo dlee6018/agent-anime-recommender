@@ -1,1 +1,1 @@
-{"reranker": "reranker_anilist.txt", "maxrank": 8000, "top_cand": 250, "union_extra": 100, "graph": "rec_pairs_fresh.parquet", "emb": "tt_ens_emb.npz"}
+{"reranker": "reranker_union.txt", "maxrank": 8000, "top_cand": 250, "union_extra": 100, "graph": "rec_pairs_fresh.parquet", "emb": "tt_ens_emb.npz"}
