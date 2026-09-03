@@ -47,3 +47,37 @@ def make_product_recommender(pairs: pd.DataFrame, fallback_fn):
         return out
 
     return recommend
+
+
+def make_heldout_recommender(pairs, ids, emb, booster, fb_factory,
+                             maxrank=8000, top_cand=250, union_extra=100,
+                             mode="strict"):
+    """Serving-time HONEST recommender: for each query, rebuild the graph with
+    the query's incident edges removed, so reranker graph-features (rev_edge,
+    colist, transfer_in) cannot read the crowd answer back. This reproduces
+    the held-out eval condition per query.
+
+    mode: 'strict' drops every edge touching the query (src OR dst) — true
+    generalization (eval 0.508); 'src_only' drops only the query's own page
+    (eval 0.778).
+    """
+    import pandas as pd
+    from .rerank import make_rerank_recommender
+    from ..franchise import with_franchise_filter
+
+    src_a = pairs["src"].to_numpy()
+    dst_a = pairs["dst"].to_numpy()
+
+    def recommend(query_ids, k):
+        q = set(query_ids)
+        if mode == "strict":
+            keep = ~(pd.Series(src_a).isin(q) | pd.Series(dst_a).isin(q))
+        else:
+            keep = ~pd.Series(src_a).isin(q)
+        fb = fb_factory()
+        fb.set_graph(pairs[keep.to_numpy()])
+        fn = with_franchise_filter(make_rerank_recommender(
+            ids, emb, booster, fb, maxrank, top_cand, union_extra=union_extra))
+        return fn(query_ids, k)
+
+    return recommend

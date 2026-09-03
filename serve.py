@@ -24,8 +24,36 @@ ap.add_argument("--model", default="rerank")  # pure ML: gauge the model, not th
 args = ap.parse_args()
 
 print("loading models...", flush=True)
-REC = get_model(args.model)
-REC_LOCK = threading.Lock()  # LightGBM predict across threads: unpinned safety
+import lightgbm as lgb
+import numpy as np
+import pandas as pd
+
+from src.features import build_features
+from src.models.product import make_heldout_recommender
+from src.models.rerank import FeatureBuilder, make_rerank_recommender
+from src.franchise import with_franchise_filter
+
+_ids, _X, _ = build_features("content_emb_qwen.npz")
+_emb = np.load(Path(__file__).parent / "data" / "tt_ens_emb.npz")["emb"].astype(np.float32)
+_booster = lgb.Booster(model_file=str(Path(__file__).parent / "data" / "reranker_final.txt"))
+_pairs = pd.read_parquet(Path(__file__).parent / "data" / "rec_pairs_fresh.parquet")
+_fb = FeatureBuilder(_ids)  # shared; set_graph swapped under REC_LOCK
+
+def _fb_factory():
+    return _fb
+
+_fb.set_graph(_pairs)
+_full = with_franchise_filter(make_rerank_recommender(
+    _ids, _emb, _booster, _fb, 8000, 250, union_extra=100))
+
+MODES = {
+    "strict": make_heldout_recommender(_pairs, _ids, _emb, _booster,
+                                       _fb_factory, mode="strict"),
+    "src_only": make_heldout_recommender(_pairs, _ids, _emb, _booster,
+                                         _fb_factory, mode="src_only"),
+    "full": lambda q, k: (_fb.set_graph(_pairs) or _full(q, k)),
+}
+REC_LOCK = threading.Lock()  # serializes set_graph swaps + LGBM predict
 
 # cover images from the 2023 dump (display only)
 import csv as _csv
@@ -65,7 +93,12 @@ background:#242936}
 <form onsubmit="go();return false">
 <input id="q" type="text" placeholder="e.g. Death Note, Frieren, jjk"
  autofocus><select id="k"><option>5</option><option selected>10</option>
-<option>15</option></select><button>Recommend</button></form>
+<option>15</option></select><select id="m" title="how much the model may
+peek at MAL's crowd rec graph for your query">
+<option value="strict" selected>model only</option>
+<option value="src_only">+reverse edges</option>
+<option value="full">crowd lookup</option></select>
+<button>Recommend</button></form>
 <p class="hint">Tip: comma-separate several titles to blend tastes.</p>
 <div id="err"></div><div id="spin"></div><div id="out"></div>
 <script>
@@ -78,7 +111,7 @@ async function go(){
  document.getElementById('out').innerHTML='';
  document.getElementById('spin').textContent='thinking…';
  try{
-  const r=await fetch('/recommend?'+ps+'&k='+k); const d=await r.json();
+  const m=document.getElementById('m').value;const r=await fetch('/recommend?'+ps+'&k='+k+'&mode='+m); const d=await r.json();
   document.getElementById('spin').textContent='';
   if(d.error){document.getElementById('err').textContent=
     'could not find: '+(d.unknown||[]).join(', ');return}
@@ -114,6 +147,8 @@ class Handler(BaseHTTPRequestHandler):
         qs = urllib.parse.parse_qs(url.query)
         names = qs.get("anime", [])
         k = min(int(qs.get("k", ["5"])[0]), 50)
+        mode = qs.get("mode", ["strict"])[0]
+        rec_fn = MODES.get(mode, MODES["strict"])
         ids, unknown = [], []
         for n in names:
             aid = resolve_title(n)
@@ -123,8 +158,9 @@ class Handler(BaseHTTPRequestHandler):
             code = 400
         else:
             with REC_LOCK:
-                recs = REC(ids, k)
+                recs = rec_fn(ids, k)
             body = {
+                "mode": mode,
                 "query": [{"mal_id": q, "title": TT.get(q)} for q in ids],
                 "unknown": unknown,
                 "recommendations": [
