@@ -15,6 +15,7 @@ python recommend.py "Frieren" "Mushishi" -k 10   # multi-anime input
 python recommend.py "K-On!" --model rerank       # force the pure ML pipeline
 
 python serve.py --port 8501                      # persistent server (~15ms/query)
+# public demo tunnel (user-requested 2026-09-03): cloudflared --url http://localhost:8501
 curl 'localhost:8501/recommend?anime=deathnote&k=5'
 
 # survive shell/session exit:

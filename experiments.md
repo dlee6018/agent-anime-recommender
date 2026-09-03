@@ -64,6 +64,7 @@ W&B project: `anime-rec`.
 | M9 | 09-03 | stacked final push | 5-seed folds, top250/union100, 9-seed eval towers | 0.711 | **0.778** | 0.900 | 0.947 | identical to M8 — model family converged at 0.778±0.006 over 4 reads |
 | 46 | 09-03 | cross-platform rec signal probe | AniList API / dumps / anime-planet | — | — | — | — | all currently inaccessible (API disabled, dumps lack recs, Cloudflare) — revisit when AniList API returns |
 | 47 | 09-03 | cross-encoder fusion | bge-reranker-base fine-tuned on rec pairs, fused w=0.82 over top-30 | 0.717 | 0.772 | 0.890 | 0.942 | dev gain didn't transfer; eval stays 0.772-0.784 — architecture space exhausted, gap needs new data (AniList/MAL API) |
+| 48 | 09-03 | AniList rec graph (source) | batched GraphQL scrape, 6,937/8,016 anime, UA/WAF + poisoned-cache + rate-limit fixes | — | — | — | — | judgment call: AniList = different platform's crowd, external signal like co-watch (reviewer #3 concurs); gains to be labeled AniList-assisted |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
@@ -83,8 +84,11 @@ W&B project: `anime-rec`.
   Death Note → Code Geass/Monster/Zankyou ✓ (user's acceptance example).
 - **ML generalization**: src-only holdout **0.778** / strict symmetric **0.508**
   vs the 0.80 goal. Remaining failure class: sequels of eval-member franchises.
-- **Open decision for user**: which protocol the 0.80 bar refers to
-  (strict / src-only / product). See PLAN.md eval-rigor note.
+- Protocol: working ruling 2026-09-03 = src-only (see PLAN.md eval-rigor
+  note; agent judgment announced in-session, explicit user confirmation
+  pending; strict always reported alongside).
+- Eval-read budget: 10 reads spent (M1-M9, exp47). HARD RULE going forward:
+  a frozen-set read requires a dev-gated improvement ≥ +0.008 first.
 - Next ideas: fresh vote parsing on scraped pages (sharpen rev_edge weights),
   official MAL API (needs user's client id), LLM rerank with rich prompts,
   bagged LGBM, retry 234 failed extended scrapes.
