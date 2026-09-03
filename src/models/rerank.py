@@ -15,7 +15,7 @@ FEATS_BASE = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
               "type_match", "cand_season", "src_season", "studio_match",
               "cand_score", "transfer_in", "nbr_out", "cand_has_graph",
               "cand_age", "rev_edge", "colist", "rev_fam"]
-FEATS_ANILIST = ["al_rec", "al_rev", "al_rank"]
+FEATS_ANILIST = ["al_rec", "al_rev", "al_rank", "al_transfer"]
 FEATS = FEATS_BASE + FEATS_ANILIST  # full set; rows() gates the al block
 
 SEASON_RE = re.compile(
@@ -76,12 +76,14 @@ class FeatureBuilder:
         cross-platform signal; no fold holdout needed (not MAL graph data)."""
         self.al_out = {}
         self.al_in = {}
+        self.al_norm = {}
         for s_, lst in recs.items():
             if not lst:
                 continue  # empty (unscraped/unknown) — do not enable al block
             s_ = int(s_)
             out = [(int(d), float(r)) for d, r in lst]
             self.al_out[s_] = out
+            self.al_norm[s_] = sum(r for _, r in out) or 1.0
             for d, r in out:
                 self.al_in.setdefault(d, {})[s_] = float(r)
 
@@ -219,11 +221,19 @@ class FeatureBuilder:
                 rev, colist, rev_fam,
             ]
             if self.al_out:  # AniList features only when the graph is loaded
+                al_tin = 0.0
+                for s2, r2 in self.al_in.get(int(c_id), {}).items():
+                    if s2 == s_id or s2 not in self.idx:
+                        continue
+                    sim2 = float(tt_q @ tt_emb[self.idx[s2]])
+                    if sim2 > 0:
+                        al_tin += (sim2 ** 3) * (r2 / self.al_norm[s2])
                 row += [
                     np.log1p(al_pos.get(int(c_id), (0, 0.0))[1]),
                     np.log1p(self.al_in.get(int(c_id), {}).get(s_id, 0.0)),
                     1.0 / (al_pos[int(c_id)][0] + 1) if int(c_id) in al_pos
                     else 0.0,
+                    al_tin,
                 ]
             out.append(row)
         return np.array(out, dtype=np.float32)
