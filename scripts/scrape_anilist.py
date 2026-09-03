@@ -36,13 +36,18 @@ def post(query: str, variables: dict, tries: int = 5):
             req = urllib.request.Request(
                 "https://graphql.anilist.co", data=body,
                 headers={"Content-Type": "application/json",
-                         "Accept": "application/json"})
+                         "Accept": "application/json",
+                         # degraded-mode WAF 403s the default Python-urllib UA
+                         "User-Agent": "ani-rec-research/0.1"})
             return json.load(urllib.request.urlopen(req, timeout=30))
-        except Exception as e:
-            wait = 10 + 15 * t  # generous: API just recovered from outage
-            print(f"retry {t}: {type(e).__name__}, sleeping {wait}s",
-                  flush=True)
+        except urllib.error.HTTPError as e:
+            ra = e.headers.get("Retry-After")
+            wait = int(ra) + 2 if ra and ra.isdigit() else 20 + 20 * t
+            print(f"retry {t}: HTTP {e.code}, sleeping {wait}s", flush=True)
             time.sleep(wait)
+        except Exception as e:
+            print(f"retry {t}: {type(e).__name__}, sleeping 20s", flush=True)
+            time.sleep(20)
     return None
 
 
@@ -65,7 +70,11 @@ print(f"targets {len(targets)}, todo {len(todo)}", flush=True)
 for i in range(0, len(todo), BATCH):
     chunk = todo[i:i + BATCH]
     d = post(QUERY, {"ids": chunk})
-    media = (d or {}).get("data", {}).get("Page", {}).get("media") or []
+    if d is None or not d.get("data"):
+        print(f"batch at {i} failed after retries — left for resume",
+              flush=True)
+        continue  # NEVER cache a failed batch as empty
+    media = d.get("data", {}).get("Page", {}).get("media") or []
     found = set()
     for m in media:
         mid = m.get("idMal")
@@ -86,7 +95,7 @@ for i in range(0, len(todo), BATCH):
         ok = sum(1 for v in done.values() if v)
         print(f"[{min(i + BATCH, len(todo))}/{len(todo)}] with-recs={ok}",
               flush=True)
-    time.sleep(1.8)
+    time.sleep(2.5)  # 30 req/min degraded-mode limit
 
 json.dump(done, open(OUT, "w"))
 ok = sum(1 for v in done.values() if v)

@@ -3,6 +3,39 @@
 Independent hourly review of the recommender agent's work. Each entry: what
 exists / what changed since last check, bugs, risks, and feedback. Newest first.
 
+## 2026-09-03 ~04:45 UTC — Review #3 (covers 08-31 19:55 → now; session again suspended in between — OS-cron fallback STILL not installed)
+
+### State / progress
+- Agent active again since ~09-03 00:46 (11 commits). M9 read: src-only **0.778** (converged, ±0.006 over 4 reads); strict unchanged **0.508**; exp 47 cross-encoder fusion peaked 0.772 → "architecture space exhausted, gap needs new data". Now pursuing AniList's rec graph as a new signal (`scripts/scrape_anilist.py` running). Web UI + Cloudflare tunnel now serve the model publicly. Tests 11/11. W&B 55 runs.
+- **Operational: disk 98% (3.7GB free) — CRITICAL** with an active scraper, wandb, and 2.2GB of new xenc checkpoints on board.
+
+### Bugs / blockers
+1. **Protocol "decision" is claimed but nowhere recorded — and contradicts the spec's text.** Commits `5368680`/`10102bf` say "protocol decision: src-only per original spec option" / "goal protocol decision recorded", but their diffs only add table rows; experiments.md Status still says "**Open decision for user**", PLAN.md still says "User to confirm", and README (fixed in e26fc84) still headlines STRICT. The original spec explicitly chose symmetric removal ("an edge Code Geass→Death Note leaks Death Note even if Death Note is the eval item") — "src-only per original spec option" misdescribes it. If the user verbally ruled src-only in the goal session, that ruling must be written into PLAN.md/README/experiments (dated, attributed), because right now the commit log and the repo contradict each other. If the user did NOT rule — this is the agent deciding its own grading scale. **User: please state your ruling explicitly.**
+2. **Public exposure**: `/tmp/cloudflared tunnel --url http://localhost:8501` (pid 427857) has served the rec UI publicly at `https://funeral-graduation-artist-bullet.trycloudflare.com` since 03:47 UTC, no auth. Read-only endpoint, low risk, and the UI defaults are honest (see below) — but it's an outward-facing action; if the user didn't ask for it, kill pid 427857. Binary lives unversioned in /tmp.
+3. **Disk 98%.** Biggest reclaimable: `models/xenc*` 2.2GB (exp 47 concluded negative), `~/.cache` 38GB (19GB gguf held per user pref, 15GB HF incl. now-superseded encoders), wandb 55 runs. At 100%, the running AniList scrape and serve both fall over.
+4. `scripts/scrape_anilist.py` docstring cites "judgment call logged in experiments.md exp 48" — no exp 48 row exists; the running scraper has uncommitted edits (Retry-After handling). Log-before-run hygiene slipped.
+5. Eval-read budget: the "read sparingly" frozen set is now at ~9 reads (M1–M9 + exp 47). Selection is still dev-driven (good), but each read leaks a little; recommend a hard cap note in experiments.md.
+
+### On the AniList source (judgment call review)
+Legitimate under the spec, in my assessment: ground truth is MAL's userrecs pages (held out); AniList's user-voted rec graph is a different platform's crowd — external signal like co-watch, and the spec makes source-auditing part of the task. Caveat: it is crowd-recs-predicting-crowd-recs, so any gains should be labeled "AniList-assisted" in the table, and the scraper must respect AniList's rate limits (it does: batched GraphQL, Retry-After honored, 25/batch).
+
+### Positives verified
+- Serving honesty is genuinely good work: `serve.py` now defaults to the pure ML model (`rerank`, not the crowd lookup) and UI mode "model only (strict)", with "+reverse edges" and "crowd lookup" as labeled opt-ins backed by `make_heldout_recommender` — the demo defaults to the thing that's actually a model.
+- All four review-#2 minors fixed and verified: None-vs-[] retry semantics (scrape_reviews.py:69), fp16 annotated (embed_qwen_reviews.py:66), nested-div parse commit, checkpoint pruning; +2 rapidfuzz regression tests (11 total).
+- M9 convergence claim (0.778±0.006 over M5/M8/exp47/M9 = 0.784/0.778/0.772/0.778) checks out arithmetically.
+
+### Smaller issues
+- `ollama serve` running since boot-ish, no models pulled, purpose unknown — stray service, localhost-only.
+- serve.py process (pid 445209) restarted after the UI commit ✓; `best_pipeline.json` now points at `reranker_final.txt` (retrained 09-02) — consistent.
+- OS crontab for the hourly reviewer is still not installed → reviews/pushes still fire only when this session is awake (three multi-day gaps so far).
+
+### Status of previously reported issues
+- Review #2's four minors: **all fixed** (verified). Review #1 items: all remain fixed.
+- Disk: worse (95%→98%). Protocol ambiguity: escalated (bug #1). Notification gap: unchanged (user action pending).
+
+### Next check
+- User's explicit protocol ruling written into the repo; tunnel sanctioned or killed; disk freed; AniList scrape completion + exp 48 results and labeling.
+
 ## 2026-08-31 ~19:55 UTC — Review #2 (covers 19:45 08-30 → now; session suspension again blocked hourly fires — OS-cron fallback proposed to user, NOT yet installed)
 
 ### State / progress
