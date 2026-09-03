@@ -63,6 +63,7 @@ W&B project: `anime-rec`.
 | 45 | 08-30 | strict-protocol upgrade attempt | review content + wide retrieval (8000/200/80) + 21-feat reranker, symmetric holdout | 0.515 | — | — | — | ≤ 0.524 baseline → no eval read; strict saturated ~0.51 with available signals |
 | M9 | 09-03 | stacked final push | 5-seed folds, top250/union100, 9-seed eval towers | 0.711 | **0.778** | 0.900 | 0.947 | identical to M8 — model family converged at 0.778±0.006 over 4 reads |
 | 46 | 09-03 | cross-platform rec signal probe | AniList API / dumps / anime-planet | — | — | — | — | all currently inaccessible (API disabled, dumps lack recs, Cloudflare) — revisit when AniList API returns |
+| 47 | 09-03 | cross-encoder fusion | bge-reranker-base fine-tuned on rec pairs, fused w=0.82 over top-30 | 0.717 | 0.772 | 0.890 | 0.942 | dev gain didn't transfer; eval stays 0.772-0.784 — architecture space exhausted, gap needs new data (AniList/MAL API) |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
