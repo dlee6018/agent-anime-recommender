@@ -74,4 +74,9 @@ data = [InputExample(texts=[a, b], label=y) for a, b, y in examples]
 loader = DataLoader(data, shuffle=True, batch_size=24)
 model.fit(train_dataloader=loader, epochs=args.epochs, warmup_steps=500,
           output_path=str(ROOT / args.out), show_progress_bar=True)
-print("saved", ROOT / args.out, flush=True)
+# newer sentence-transformers ignores output_path in fit — save explicitly
+out = ROOT / args.out
+out.mkdir(parents=True, exist_ok=True)
+model.save(str(out))
+assert (out / "config.json").exists(), "checkpoint not written"
+print("saved", out, flush=True)
