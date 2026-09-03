@@ -70,6 +70,7 @@ W&B project: `anime-rec`.
 | **M10** | 09-03 | **GOAL MET (AniList-assisted, src-only)** | 9-seed towers + reranker_anilist | 0.816 | **0.836** | **0.920** | **0.958** | **≥0.80 target cleared**; residual misses = sequel queries |
 | M11 | 09-03 | strict + AniList | symmetric holdout, AniList features survive (external data) | 0.757 | **0.776** | 0.910 | 0.952 | strict lifted 0.508→0.776 by AniList alone; 0.024 short of goal under harshest reading |
 | 50 | 09-03 | al_transfer (AniList 2-hop) | tower-sim-weighted AniList in-edges | strict 0.760 / src 0.812 | — | — | — | below +0.008 gate (strict) / neutral (src) — no eval reads; champion unchanged |
+| 51 | 09-03 | fresh MAL-API co-watch (interim probe) | 7.5k rec-writer lists = 2.48M interactions | ALS-kNN 0.247 vs 0.213 old | — | — | — | 2024+ coverage 96% vs 1%; full 25k-user rebuild queued |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
