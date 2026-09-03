@@ -60,6 +60,10 @@ MAXRANK_RETRIEVE = args.maxrank
 meta = load_metadata()
 ids, X, _ = build_features(args.content)
 fb = FeatureBuilder(ids)
+al_path = DATA / "anilist_recs.json"
+if al_path.exists():
+    fb.set_anilist(json.load(open(al_path)))
+    print(f"anilist graph: {len(fb.al_out)} srcs", flush=True)
 idx = fb.idx
 pop = np.array([(meta.get(int(a), {}).get("popularity") or 99999)
                 for a in ids])
@@ -120,7 +124,8 @@ for f in range(N_FOLDS) if not args.lgbm_only else []:
             in_nbrs = [x for x, _ in sorted(fb.in_lists.get(s_id, ()),
                                             key=lambda t: -t[1])
                        [:args.union_extra]]
-            for extra in (in_nbrs,
+            al_cands = [d for d, _ in fb.al_out.get(s_id, [])]
+            for extra in (al_cands, in_nbrs,
                           fb.cooc_top(s_id, args.union_extra, retrieve_mask),
                           fb.content_top(s_id, args.union_extra,
                                          retrieve_mask)):

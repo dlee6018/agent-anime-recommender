@@ -14,7 +14,8 @@ FEATS = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
          "genre_jac", "year_gap", "cand_logpop", "src_logpop", "type_match",
          "cand_season", "src_season", "studio_match", "cand_score",
          "transfer_in", "nbr_out", "cand_has_graph", "cand_age",
-         "rev_edge", "colist", "rev_fam"]
+         "rev_edge", "colist", "rev_fam",
+         "al_rec", "al_rev", "al_rank"]
 
 SEASON_RE = re.compile(
     r"(?:(\d)(?:nd|rd|th) season|season (\d)|part (\d)|\b(ii|iii|iv)\b)", re.I)
@@ -57,6 +58,9 @@ class FeatureBuilder:
         self.out_lists: dict[int, list[tuple[int, float]]] = {}
         self.in_lists: dict[int, list[tuple[int, float]]] = {}
         self._fam_cache = {}  # family lookups depend on graph nodes
+        if not hasattr(self, "al_out"):
+            self.al_out: dict[int, list[tuple[int, float]]] = {}
+            self.al_in: dict[int, dict[int, float]] = {}
         for s, g in pairs.groupby("src"):
             v = np.log1p(g.votes.to_numpy().astype(np.float32))
             v /= v.sum() + 1e-9
@@ -65,6 +69,18 @@ class FeatureBuilder:
                 if si in self.idx and di in self.idx:
                     self.out_lists.setdefault(si, []).append((di, float(wt)))
                     self.in_lists.setdefault(di, []).append((si, float(wt)))
+
+    def set_anilist(self, recs: dict) -> None:
+        """AniList rec graph {mal_id: [[rec_id, rating], ...]} — exogenous
+        cross-platform signal; no fold holdout needed (not MAL graph data)."""
+        self.al_out = {}
+        self.al_in = {}
+        for s_, lst in recs.items():
+            s_ = int(s_)
+            out = [(int(d), float(r)) for d, r in lst]
+            self.al_out[s_] = out
+            for d, r in out:
+                self.al_in.setdefault(d, {})[s_] = float(r)
 
     def graph_feats(self, cand: int, tt_q: np.ndarray,
                     tt_emb: np.ndarray) -> tuple[float, float]:
@@ -144,6 +160,8 @@ class FeatureBuilder:
         # (franchise-collapsed q_in was tried and reverted — exp 33: base
         # queries inherit noisy sequel in-edges, dev 0.709 -> 0.601)
         q_in = {s: w for s, w in self.in_lists.get(s_id, ())}
+        al_list = self.al_out.get(s_id, [])
+        al_pos = {d: (i, r) for i, (d, r) in enumerate(al_list)}
         out = []
         for c_id in cands:
             ci = self.idx[int(c_id)]
@@ -188,6 +206,10 @@ class FeatureBuilder:
                 tin, nout,
                 has_graph, float(2026 - (year_of(int(c_id)) or 2005)),
                 rev, colist, rev_fam,
+                np.log1p(al_pos.get(int(c_id), (0, 0.0))[1]),
+                np.log1p(self.al_in.get(int(c_id), {}).get(s_id, 0.0)),
+                1.0 / (al_pos[int(c_id)][0] + 1) if int(c_id) in al_pos
+                else 0.0,
             ])
         return np.array(out, dtype=np.float32)
 
@@ -221,7 +243,8 @@ def make_rerank_recommender(ids: np.ndarray, tt_emb: np.ndarray,
             seen = set(cands)
             in_nbrs = [s for s, _ in sorted(fb.in_lists.get(s_dom, ()),
                                             key=lambda x: -x[1])[:union_extra]]
-            for extra in (in_nbrs,
+            al_cands = [d for d, _ in fb.al_out.get(s_dom, [])]
+            for extra in (al_cands, in_nbrs,
                           fb.cooc_top(s_dom, union_extra, rmask),
                           fb.content_top(s_dom, union_extra, rmask)):
                 cands.extend(c for c in extra

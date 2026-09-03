@@ -62,6 +62,9 @@ emb = np.concatenate(embs, axis=1) / np.sqrt(len(embs))
 
 fb = FeatureBuilder(ids)
 fb.set_graph(pairs)
+al_path = DATA / "anilist_recs.json"
+if al_path.exists():
+    fb.set_anilist(json.load(open(al_path)))
 booster = lgb.Booster(model_file=str(DATA / cfg["reranker"]))
 fn = with_franchise_filter(make_rerank_recommender(
     ids, emb, booster, fb, cfg["maxrank"], cfg["top_cand"],

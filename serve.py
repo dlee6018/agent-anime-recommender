@@ -26,6 +26,72 @@ args = ap.parse_args()
 print("loading models...", flush=True)
 REC = get_model(args.model)
 REC_LOCK = threading.Lock()  # LightGBM predict across threads: unpinned safety
+
+# cover images from the 2023 dump (display only)
+import csv as _csv
+
+IMG = {}
+try:
+    for _r in _csv.DictReader(open(Path(__file__).parent / "data" / "raw"
+                                   / "anime_metadata_2023.csv")):
+        IMG[int(_r["anime_id"])] = _r.get("Image URL") or ""
+except Exception:
+    pass
+
+PAGE = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ani-rec</title><style>
+:root{--bg:#0f1115;--card:#181b22;--fg:#e8eaf0;--mut:#8a90a0;--acc:#7aa2ff}
+*{box-sizing:border-box;margin:0}body{background:var(--bg);color:var(--fg);
+font:16px/1.5 system-ui,sans-serif;max-width:720px;margin:0 auto;padding:24px}
+h1{font-size:22px;margin-bottom:4px}p.sub{color:var(--mut);margin-bottom:20px}
+form{display:flex;gap:8px;margin-bottom:8px}
+input[type=text]{flex:1;padding:10px 14px;border-radius:10px;border:1px solid
+#2a2f3a;background:var(--card);color:var(--fg);font-size:16px}
+select,button{padding:10px 14px;border-radius:10px;border:1px solid #2a2f3a;
+background:var(--card);color:var(--fg);font-size:15px}
+button{background:var(--acc);color:#0b0d12;font-weight:600;cursor:pointer}
+.hint{color:var(--mut);font-size:13px;margin-bottom:20px}
+.card{display:flex;gap:14px;background:var(--card);border-radius:12px;
+padding:12px;margin-bottom:10px;align-items:center}
+.card img{width:56px;height:80px;object-fit:cover;border-radius:8px;
+background:#242936}
+.rank{color:var(--mut);font-size:14px;min-width:22px}
+.card a{color:var(--fg);text-decoration:none;font-weight:600}
+.card a:hover{color:var(--acc)}
+#err{color:#ff8a8a;margin:12px 0}#spin{color:var(--mut)}
+</style></head><body>
+<h1>ani-rec</h1><p class="sub">anime you'll probably like, per the MAL crowd</p>
+<form onsubmit="go();return false">
+<input id="q" type="text" placeholder="e.g. Death Note, Frieren, jjk"
+ autofocus><select id="k"><option>5</option><option selected>10</option>
+<option>15</option></select><button>Recommend</button></form>
+<p class="hint">Tip: comma-separate several titles to blend tastes.</p>
+<div id="err"></div><div id="spin"></div><div id="out"></div>
+<script>
+async function go(){
+ const q=document.getElementById('q').value.trim(); if(!q)return;
+ const names=q.split(',').map(s=>s.trim()).filter(Boolean);
+ const ps=names.map(n=>'anime='+encodeURIComponent(n)).join('&');
+ const k=document.getElementById('k').value;
+ document.getElementById('err').textContent='';
+ document.getElementById('out').innerHTML='';
+ document.getElementById('spin').textContent='thinking…';
+ try{
+  const r=await fetch('/recommend?'+ps+'&k='+k); const d=await r.json();
+  document.getElementById('spin').textContent='';
+  if(d.error){document.getElementById('err').textContent=
+    'could not find: '+(d.unknown||[]).join(', ');return}
+  let h='<p class="hint">for: '+d.query.map(x=>x.title).join(' + ')+'</p>';
+  for(const rec of d.recommendations){
+   h+='<div class="card"><span class="rank">'+rec.rank+'</span>'+
+    (rec.image?'<img loading="lazy" src="'+rec.image+'">':'<img>')+
+    '<a href="'+rec.url+'" target="_blank" rel="noopener">'+rec.title+
+    '</a></div>'}
+  document.getElementById('out').innerHTML=h;
+ }catch(e){document.getElementById('spin').textContent='';
+  document.getElementById('err').textContent='server error';}}
+</script></body></html>"""
 TT = titles()
 META = load_metadata()
 print("ready", flush=True)
@@ -34,6 +100,14 @@ print("ready", flush=True)
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urllib.parse.urlparse(self.path)
+        if url.path in ("/", "/index.html"):
+            data = PAGE.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if url.path != "/recommend":
             self.send_error(404)
             return
@@ -55,7 +129,8 @@ class Handler(BaseHTTPRequestHandler):
                 "unknown": unknown,
                 "recommendations": [
                     {"rank": i + 1, "mal_id": r, "title": TT.get(r),
-                     "url": f"https://myanimelist.net/anime/{r}"}
+                     "url": f"https://myanimelist.net/anime/{r}",
+                     "image": IMG.get(r, "")}
                     for i, r in enumerate(recs)],
             }
             code = 200

@@ -79,6 +79,9 @@ def get_model(name: str):
         import pandas as pd
         fb.set_graph(pd.read_parquet(
             DATA / cfg.get("graph", "rec_pairs.parquet")))
+        al_path = DATA / "anilist_recs.json"
+        if al_path.exists():
+            fb.set_anilist(json.load(open(al_path)))
         fn = make_rerank_recommender(
             ids, emb, booster, fb, cfg["maxrank"], cfg["top_cand"],
             union_extra=cfg["union_extra"])
