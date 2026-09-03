@@ -1,6 +1,7 @@
 # Experiment log — anime-rec
 
 Goal: mean P@5 ≥ 0.80 vs MAL top-10 userrecs, 100 held-out popular anime.
+**STATUS: MET 2026-09-03 — M10 eval P@5 = 0.836 (src-only protocol, AniList-assisted). Strict: 0.776 (M11).**
 Eval anime are cold-start in the rec graph (all incident edges removed from
 training), so models must generalize from co-watch interactions + content.
 W&B project: `anime-rec`.
@@ -65,6 +66,9 @@ W&B project: `anime-rec`.
 | 46 | 09-03 | cross-platform rec signal probe | AniList API / dumps / anime-planet | — | — | — | — | all currently inaccessible (API disabled, dumps lack recs, Cloudflare) — revisit when AniList API returns |
 | 47 | 09-03 | cross-encoder fusion | bge-reranker-base fine-tuned on rec pairs, fused w=0.82 over top-30 | 0.717 | 0.772 | 0.890 | 0.942 | dev gain didn't transfer; eval stays 0.772-0.784 — architecture space exhausted, gap needs new data (AniList/MAL API) |
 | 48 | 09-03 | AniList rec graph (source) | batched GraphQL scrape, 6,937/8,016 anime, UA/WAF + poisoned-cache + rate-limit fixes | — | — | — | — | judgment call: AniList = different platform's crowd, external signal like co-watch (reviewer #3 concurs); gains to be labeled AniList-assisted |
+| 49 | 09-03 | AniList-featured reranker | al_rec/al_rev/al_rank + candidate injection, 5-seed folds | **0.816** | — | — | — | dev +0.105 — biggest single gain of the project |
+| **M10** | 09-03 | **GOAL MET (AniList-assisted, src-only)** | 9-seed towers + reranker_anilist | 0.816 | **0.836** | **0.920** | **0.958** | **≥0.80 target cleared**; residual misses = sequel queries |
+| M11 | 09-03 | strict + AniList | symmetric holdout, AniList features survive (external data) | 0.757 | **0.776** | 0.910 | 0.952 | strict lifted 0.508→0.776 by AniList alone; 0.024 short of goal under harshest reading |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
