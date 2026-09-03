@@ -61,6 +61,8 @@ W&B project: `anime-rec`.
 | 43 | 08-30 | milestone-tower epochs | 8/10/12/15, no early stop, dev-condition | 0.684-0.697 | — | — | — | flat within noise; epochs=12 stands |
 | 44 | 08-30 | review-augmented content (user idea) | top-2 MAL review excerpts in Qwen docs, 2048 ctx, 99% coverage of pop≤4000 | 0.711 mixed / 0.703 clean | — | — | — | neutral at pipeline level (0.709 base); best single tower ever (0.452) but graph features dominate under src-only; review data kept for future strict-side work |
 | 45 | 08-30 | strict-protocol upgrade attempt | review content + wide retrieval (8000/200/80) + 21-feat reranker, symmetric holdout | 0.515 | — | — | — | ≤ 0.524 baseline → no eval read; strict saturated ~0.51 with available signals |
+| M9 | 09-03 | stacked final push | 5-seed folds, top250/union100, 9-seed eval towers | 0.711 | **0.778** | 0.900 | 0.947 | identical to M8 — model family converged at 0.778±0.006 over 4 reads |
+| 46 | 09-03 | cross-platform rec signal probe | AniList API / dumps / anime-planet | — | — | — | — | all currently inaccessible (API disabled, dumps lack recs, Cloudflare) — revisit when AniList API returns |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
