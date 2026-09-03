@@ -107,7 +107,40 @@ def resolve_title(query: str) -> int | None:
     if exact is not None and best_alt is not None and exact != best_alt:
         if pop(exact) > 3000 and pop(best_alt) < 500:
             return best_alt
-    return exact if exact is not None else best_alt
+    if exact is not None or best_alt is not None:
+        return exact if exact is not None else best_alt
+    # last resort: edit-distance over squashed titles ("detah note",
+    # "attack on titen"); popularity breaks near-ties, cutoff rejects noise
+    try:
+        from rapidfuzz import fuzz, process
+    except ImportError:
+        return None
+    t2i = _t2i_nospace()
+    qs = _squash(q)
+    if len(qs) < 6:
+        return None
+    cand: dict[int, float] = {}
+    for key, score, _ in process.extract(qs, t2i.keys(), scorer=fuzz.ratio,
+                                         score_cutoff=83, limit=10):
+        a = t2i[key]
+        cand[a] = max(cand.get(a, 0), score)
+    if len(qs) >= 8:
+        # typo'd short form of a long official title ("demon slyaer" vs
+        # "demonslayerkimetsunoyaiba"): window match, popular anime only
+        # keys must be LONGER than the query: partial_ratio uses the
+        # shorter side as the needle, so short synonym keys ("kon") match
+        # anything containing them at score 100
+        pop_keys = [k for k, a in t2i.items()
+                    if pop(a) <= 1500 and len(k) > len(qs)]
+        for key, score, _ in process.extract(qs, pop_keys,
+                                             scorer=fuzz.partial_ratio,
+                                             score_cutoff=88, limit=10):
+            a = t2i[key]
+            cand[a] = max(cand.get(a, 0), score - 1)  # slight handicap
+    if not cand:
+        return None
+    best = max(cand.values())
+    return min((a for a, sc in cand.items() if sc >= best - 5), key=pop)
 
 
 def year_of(aid: int) -> int | None:

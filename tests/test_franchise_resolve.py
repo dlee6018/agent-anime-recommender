@@ -44,5 +44,21 @@ def test_resolve_exact_and_fuzzy():
         assert tt[resolve_title(q)] == want, q
 
 
+def test_resolve_typos_fuzzy():
+    tt = titles()
+    cases = {"detah note": "Death Note",
+             "attack on titen": "Shingeki no Kyojin",
+             "demon slyaer": "Kimetsu no Yaiba",
+             "chansaw man": "Chainsaw Man",
+             "steins;gaet": "Steins;Gate"}
+    for q, want in cases.items():
+        assert tt[resolve_title(q)] == want, q
+
+
+def test_resolve_gibberish_rejected():
+    assert resolve_title("fright night") is None
+    assert resolve_title("zzz not an anime zzz") is None
+
+
 def test_resolve_unknown():
     assert resolve_title("zzz not an anime zzz") is None
