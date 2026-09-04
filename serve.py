@@ -49,7 +49,16 @@ _fb.set_graph(_pairs)
 _full = with_franchise_filter(make_rerank_recommender(
     _ids, _emb, _booster, _fb, 8000, 250, union_extra=100))
 
+# bare = no crowd-rec data about the query from ANY platform:
+# no AniList loaded at all + per-query strict MAL-edge removal +
+# a booster trained without AniList features (reranker_strict2, 21 feats)
+_fb_bare = FeatureBuilder(_ids)  # never gets set_anilist
+_booster_bare = lgb.Booster(
+    model_file=str(Path(__file__).parent / "data" / "reranker_strict2.txt"))
+
 MODES = {
+    "bare": make_heldout_recommender(_pairs, _ids, _emb, _booster_bare,
+                                     lambda: _fb_bare, mode="strict"),
     "strict": make_heldout_recommender(_pairs, _ids, _emb, _booster,
                                        _fb_factory, mode="strict"),
     "src_only": make_heldout_recommender(_pairs, _ids, _emb, _booster,
@@ -98,8 +107,9 @@ background:#242936}
  autofocus><select id="k"><option>5</option><option selected>10</option>
 <option>15</option></select><select id="m" title="how much the model may
 peek at MAL's crowd rec graph for your query">
-<option value="strict" selected>model only</option>
-<option value="src_only">+reverse edges</option>
+<option value="bare" selected>bare model (no crowd data)</option>
+<option value="strict">no MAL edges (AniList ok)</option>
+<option value="src_only">+MAL reverse edges</option>
 <option value="full">crowd lookup</option></select>
 <button>Recommend</button></form>
 <p class="hint">Tip: comma-separate several titles to blend tastes.</p>
@@ -150,8 +160,8 @@ class Handler(BaseHTTPRequestHandler):
         qs = urllib.parse.parse_qs(url.query)
         names = qs.get("anime", [])
         k = min(int(qs.get("k", ["5"])[0]), 50)
-        mode = qs.get("mode", ["strict"])[0]
-        rec_fn = MODES.get(mode, MODES["strict"])
+        mode = qs.get("mode", ["bare"])[0]
+        rec_fn = MODES.get(mode, MODES["bare"])
         ids, unknown = [], []
         for n in names:
             aid = resolve_title(n)
