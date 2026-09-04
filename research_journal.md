@@ -6,6 +6,21 @@ learned and what we might run. Newest entries first.
 
 ---
 
+## 2026-09-04c — Shortlist execution complete; emerging conclusion
+
+Results: exp 54 rationale-bridge NEUTRAL (0.493); set-ranker gate KILLED
+(0.459 vs LGBM 0.457, no consistent edge); NCN/LLP pre-gate KILLED (warm-
+anchor AA recall@10 = 0.275 — teacher ceiling can't survive distillation).
+
+**Emerging conclusion**: bare P@5 ≈ 0.50-0.52 has now survived contact with
+six paradigms (frozen-4B features, fine-tuned encoders ×2, set attention,
+structural distillation, counting). Every lens confirms the information-
+theoretic reading: the crowd's specific top-10 beyond ~0.5 precision is
+social canon, not derivable from content/behavior. Remaining literature-
+backed branch: supervised LLM listwise ranking (FIRST/S-DPO/QLoRA) — gate
+next; if neutral, the bare ceiling claim graduates from hypothesis to
+finding.
+
 ## 2026-09-04b — First shortlist executions
 - Exp 53 (contrastive encoder fine-tune): NEUTRAL under bare (0.500 vs
   0.504). Lesson: light fine-tuning of a 335M encoder loses to frozen-4B
