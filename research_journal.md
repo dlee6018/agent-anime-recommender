@@ -6,6 +6,35 @@ learned and what we might run. Newest entries first.
 
 ---
 
+## 2026-09-04d — FINDING: the bare ceiling is real (~0.50-0.52)
+
+Exp 58 (supervised LLM listwise/pointwise ranker — the last literature-backed
+branch, and the config the survey said should work where zero-shot failed):
+**0.255, half the LGBM baseline.** Even with crowd labels, hard in-pool
+negatives, and co-watch stats in-prompt, a 1.7B QLoRA scorer cannot
+discriminate crowd-canonized picks from plausible neighbors.
+
+**The bare ceiling now graduates from hypothesis to finding.** Seven
+paradigms tested, all landing in 0.25-0.52:
+| paradigm | bare P@5 |
+|---|---|
+| frozen-4B features + GBDT (champion) | **0.504** |
+| + counting features (jaccard/cos_bin) | ~0.50 (AUC-positive, in-model) |
+| fine-tuned contrastive encoder (exp 53) | 0.500 |
+| rationale-bridged encoder (exp 54) | 0.493 |
+| cross-candidate set transformer (exp 56) | 0.459 val (vs LGBM 0.457) |
+| structural link-pred teacher (exp 57) | 0.275 recall ceiling |
+| supervised LLM ranker (exp 58) | 0.255 |
+
+Interpretation: predicting WHICH ~10 of ~30 equally-plausible anime a crowd
+canonized is not a modeling problem — it is social/historical information
+absent from content, behavior, and structure. The pool contains 89% of the
+truth (oracle 0.996); no scorer trained on features can order it better than
+~0.5. Progress beyond that requires importing another crowd's answer
+(AniList: 0.508 -> 0.776) or the crowd's own list (0.836+).
+
+**Research program closed.** Remaining work is product/ops, not modeling.
+
 ## 2026-09-04c — Shortlist execution complete; emerging conclusion
 
 Results: exp 54 rationale-bridge NEUTRAL (0.493); set-ranker gate KILLED

@@ -77,6 +77,7 @@ W&B project: `anime-rec`.
 | 55 | 09-04 | counting-feature gate | standalone AUC in bare pools: jaccard .826, cos_bin .827, cooc_lift .817, pmi .468 | — | — | — | — | +2 opt-in features; sequential/HSTU branch killed per gate |
 | 56 | 09-04 | set-ranker gate | 3-layer transformer over candidate slate vs LGBM, same features/split | 0.459 vs 0.457 | — | — | — | ✗ killed — no consistent edge; architecture ≠ lever at this scale |
 | 57 | 09-04 | NCN/LLP pre-gate | CN/AA/RA recall@10 of hidden edges, warm anchors | AA 0.275 | — | — | — | ✗ killed — teacher ceiling too low to survive distillation to cold queries |
+| 58 | 09-04 | supervised LLM ranker gate | Qwen3-1.7B QLoRA yes/no scorer, 22.5k crowd-labeled pairs + hard in-pool negs, co-watch in prompt | **0.255** | — | — | — | ✗ killed — half the LGBM baseline (0.504); final survey branch closed |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
