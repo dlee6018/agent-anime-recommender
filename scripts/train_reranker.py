@@ -50,6 +50,8 @@ ap.add_argument("--pairs_file", default="rec_pairs.parquet",
                 help="full rec graph used for labels + holdout filtering")
 ap.add_argument("--content", default="content_emb_qwen.npz",
                 help="content embedding file for fold-tower features")
+ap.add_argument("--no_anilist", action="store_true",
+                help="bare-mode booster: skip AniList features entirely")
 args = ap.parse_args()
 
 DATA = ROOT / "data"
@@ -61,7 +63,7 @@ meta = load_metadata()
 ids, X, _ = build_features(args.content)
 fb = FeatureBuilder(ids)
 al_path = DATA / "anilist_recs.json"
-if al_path.exists():
+if al_path.exists() and not args.no_anilist:
     fb.set_anilist(json.load(open(al_path)))
     print(f"anilist graph: {len(fb.al_out)} srcs", flush=True)
 idx = fb.idx

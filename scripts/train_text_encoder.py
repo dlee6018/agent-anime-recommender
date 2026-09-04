@@ -24,6 +24,10 @@ ap.add_argument("--pairs", default="train_pairs.parquet")
 ap.add_argument("--epochs", type=int, default=2)
 ap.add_argument("--base", default="BAAI/bge-large-en-v1.5")
 ap.add_argument("--out", default="models/text_encoder")
+ap.add_argument("--emb_out", default="content_emb_ft.npz")
+ap.add_argument("--use_expl", action="store_true",
+                help="exp 54: add (doc, explanation) pairs so similarity is "
+                     "mediated by crowd rationales (masked titles)")
 args = ap.parse_args()
 
 meta = load_metadata()
@@ -57,6 +61,20 @@ for s, d_, v in zip(pairs.src, pairs.dst, pairs.votes):
     if int(s) in meta and int(d_) in meta:
         reps = 1 + min(int(np.log1p(v)), 3)  # vote-weighted duplication
         rows += [(doc(int(s)), doc(int(d_)))] * reps
+if args.use_expl:
+    ep = pd.read_parquet(ROOT / "data" / "expl_pairs.parquet")
+    held = set()
+    for f in ("eval_set.json", "dev_set.json"):
+        held |= {int(q) for q in
+                 json.load(open(ROOT / "data" / f))["queries"]}
+    ep = ep[~ep.src.isin(held) & ~ep.dst.isin(held)]
+    n_e = 0
+    for s_, d2, ex in zip(ep.src, ep.dst, ep.expl):
+        if int(s_) in meta and int(d2) in meta:
+            rows.append((doc(int(s_)), ex))
+            rows.append((doc(int(d2)), ex))
+            n_e += 2
+    print(f"explanation pairs added: {n_e}", flush=True)
 print(f"training pairs (weighted): {len(rows)}", flush=True)
 
 from sentence_transformers import (InputExample, SentenceTransformer,  # noqa: E402
@@ -78,6 +96,6 @@ ids = [int(a) for a in np.load(ROOT / "data" / "content_emb.npz")["ids"]]
 emb = model.encode([doc(a) for a in ids], batch_size=64,
                    show_progress_bar=True, normalize_embeddings=True,
                    convert_to_numpy=True)
-np.savez(ROOT / "data" / "content_emb_ft.npz",
+np.savez(ROOT / "data" / args.emb_out,
          ids=np.array(ids, dtype=np.int64), emb=emb.astype(np.float32))
 print(f"embedded universe: {emb.shape}", flush=True)
