@@ -1,0 +1,357 @@
+<title>Crowd Canon</title>
+<style>
+  :root {
+    --ground: #F2F4F7;
+    --surface: #FFFFFF;
+    --ink: #14171F;
+    --ink-soft: #4A5262;
+    --ink-faint: #7C8598;
+    --rule: #DDE1E8;
+    --accent: #0E7C86;
+    --accent-soft: #D7ECEE;
+    --limit: #A8503A;
+    --limit-soft: #F0DDD7;
+    --shadow: 0 1px 2px rgba(20, 23, 31, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1116;
+      --surface: #161A21;
+      --ink: #E8EBF0;
+      --ink-soft: #A7AEBC;
+      --ink-faint: #767E8E;
+      --rule: #262C36;
+      --accent: #4FBFC8;
+      --accent-soft: #12333A;
+      --limit: #D98168;
+      --limit-soft: #35211C;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1116;
+    --surface: #161A21;
+    --ink: #E8EBF0;
+    --ink-soft: #A7AEBC;
+    --ink-faint: #767E8E;
+    --rule: #262C36;
+    --accent: #4FBFC8;
+    --accent-soft: #12333A;
+    --limit: #D98168;
+    --limit-soft: #35211C;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 3rem 1.25rem 5rem;
+  }
+  .wrap { max-width: 54rem; margin: 0 auto; display: flex;
+          flex-direction: column; gap: 3.25rem; }
+  h1, h2, h3 { font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+               font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2.35rem; line-height: 1.15; letter-spacing: -.015em; }
+  h2 { font-size: 1.4rem; letter-spacing: -.01em; }
+  h3 { font-size: 1.02rem; }
+  p { margin: 0; max-width: 65ch; }
+  .eyebrow {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .14em;
+    color: var(--accent); font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  section { display: flex; flex-direction: column; gap: 1.1rem; }
+  .lede { font-size: 1.08rem; color: var(--ink-soft); }
+  .rule { height: 1px; background: var(--rule); border: 0; margin: 0; }
+
+  header { display: flex; flex-direction: column; gap: .9rem; }
+  .status {
+    display: inline-flex; align-items: center; gap: .55rem; align-self: start;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 999px; padding: .3rem .8rem;
+    font-size: .8rem; font-weight: 600;
+  }
+  .dot { width: .45rem; height: .45rem; border-radius: 50%;
+         background: currentColor; }
+
+  /* regime comparison */
+  .regimes { display: flex; flex-direction: column; gap: .1rem; }
+  .regime {
+    display: grid; grid-template-columns: 12.5rem 1fr 4.2rem;
+    align-items: center; gap: 1rem;
+    padding: .85rem 1rem; background: var(--surface);
+    border: 1px solid var(--rule); border-bottom: 0; box-shadow: var(--shadow);
+  }
+  .regime:first-child { border-radius: 10px 10px 0 0; }
+  .regime:last-child { border-radius: 0 0 10px 10px; border-bottom: 1px solid var(--rule); }
+  .regime .name { font-weight: 600; font-size: .95rem; }
+  .regime .name small { display: block; font-weight: 400;
+                        color: var(--ink-faint); font-size: .78rem;
+                        line-height: 1.35; margin-top: .15rem; }
+  .track { background: var(--rule); border-radius: 999px; height: .5rem;
+           position: relative; overflow: hidden; }
+  .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px;
+          background: var(--accent); }
+  .fill.limit { background: var(--limit); }
+  .score { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+           font-variant-numeric: tabular-nums; font-size: 1.05rem;
+           font-weight: 600; text-align: right; }
+  .goalline { display: flex; justify-content: flex-end; gap: .4rem;
+              font-size: .75rem; color: var(--ink-faint);
+              font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  /* stat row */
+  .stats { display: grid; gap: .75rem;
+           grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+  .stat { background: var(--surface); border: 1px solid var(--rule);
+          border-radius: 10px; padding: .85rem .95rem; box-shadow: var(--shadow); }
+  .stat .v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+             font-size: 1.35rem; font-weight: 600;
+             font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: .76rem; color: var(--ink-faint); margin-top: .1rem; }
+
+  /* pipeline */
+  .pipe { display: flex; flex-direction: column; gap: .55rem; }
+  .stage { display: grid; grid-template-columns: 1.6rem 1fr;
+           gap: .85rem; align-items: start;
+           background: var(--surface); border: 1px solid var(--rule);
+           border-radius: 10px; padding: .85rem 1rem; box-shadow: var(--shadow); }
+  .stage .n { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+              font-size: .8rem; color: var(--accent); font-weight: 600;
+              padding-top: .12rem; }
+  .stage p { font-size: .88rem; color: var(--ink-soft); margin-top: .2rem; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+         font-size: .85em; background: var(--accent-soft); color: var(--accent);
+         padding: .08em .35em; border-radius: 4px; }
+
+  /* paradigm ladder */
+  .ladder { display: flex; flex-direction: column; gap: .5rem; }
+  .rung { display: grid; grid-template-columns: 15rem 1fr 3rem;
+          gap: .9rem; align-items: center; font-size: .88rem; }
+  .rung .bar { background: var(--rule); border-radius: 3px; height: 1.35rem;
+               position: relative; overflow: hidden; }
+  .rung .bar span { position: absolute; inset: 0 auto 0 0;
+                    background: var(--limit-soft); border-left: 3px solid var(--limit); }
+  .rung.best .bar span { background: var(--accent-soft);
+                         border-left-color: var(--accent); }
+  .rung .val { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+               font-variant-numeric: tabular-nums; text-align: right;
+               color: var(--ink-soft); }
+
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  .scroll { overflow-x: auto; }
+  th, td { text-align: left; padding: .55rem .7rem;
+           border-bottom: 1px solid var(--rule); }
+  th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em;
+       color: var(--ink-faint); font-weight: 600; }
+  td.num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+           font-variant-numeric: tabular-nums; }
+
+  .callout { background: var(--surface); border: 1px solid var(--rule);
+             border-left: 3px solid var(--limit); border-radius: 8px;
+             padding: 1.1rem 1.25rem; display: flex; flex-direction: column;
+             gap: .6rem; box-shadow: var(--shadow); }
+  .callout h3 { color: var(--limit); }
+  ul { margin: 0; padding-left: 1.1rem; color: var(--ink-soft);
+       font-size: .92rem; display: flex; flex-direction: column; gap: .35rem; }
+  a { color: var(--accent); }
+  footer { color: var(--ink-faint); font-size: .82rem; }
+  @media (max-width: 40rem) {
+    .regime { grid-template-columns: 1fr 3.5rem; }
+    .regime .track { grid-column: 1 / -1; }
+    .rung { grid-template-columns: 9rem 1fr 3rem; font-size: .8rem; }
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Anime recommender · project report</div>
+  <h1>Predicting the crowd's canon</h1>
+  <p class="lede">A system that takes an anime and returns the titles
+    MyAnimeList's community would recommend alongside it — and an honest
+    account of how much of that is a model reasoning, and how much is one
+    crowd echoing another.</p>
+  <div class="status"><span class="dot"></span>Goal met · 58 experiments ·
+    live and serving</div>
+</header>
+
+<hr class="rule">
+
+<section>
+  <div class="eyebrow">The result, in three honest regimes</div>
+  <h2>The same system scores very differently depending on what it's allowed to see</h2>
+  <p>Every number below is mean precision@5 against MyAnimeList's top-10
+    community recommendations, averaged over the same 100 held-out anime.
+    What changes is only how much crowd-recommendation data about the query
+    the model may read at inference.</p>
+
+  <div class="regimes">
+    <div class="regime">
+      <div class="name">Product path
+        <small>Query's own MAL list available — what a shipped recommender would use</small></div>
+      <div class="track"><div class="fill" style="width:100%"></div></div>
+      <div class="score">~1.00</div>
+    </div>
+    <div class="regime">
+      <div class="name">Held-out query
+        <small>Query's own MAL page hidden; other pages and AniList visible</small></div>
+      <div class="track"><div class="fill" style="width:83.6%"></div></div>
+      <div class="score">0.836</div>
+    </div>
+    <div class="regime">
+      <div class="name">Strict holdout
+        <small>Every MAL edge touching the query removed; AniList still allowed</small></div>
+      <div class="track"><div class="fill" style="width:77.6%"></div></div>
+      <div class="score">0.776</div>
+    </div>
+    <div class="regime">
+      <div class="name">Bare model
+        <small>No crowd-recommendation data about the query from any platform</small></div>
+      <div class="track"><div class="fill limit" style="width:50.4%"></div></div>
+      <div class="score">0.504</div>
+    </div>
+  </div>
+  <div class="goalline">goal line: 0.80</div>
+
+  <p>The goal was set at 0.80 under the held-out-query protocol — the standard
+    link-prediction setup, and the reading of the spec chosen at kickoff. That
+    bar is cleared at <strong>0.836</strong>, with precision@1 of 0.920 and MRR
+    of 0.958. The bare number is reported with equal prominence because it is
+    the one that describes the model's own reasoning.</p>
+</section>
+
+<section>
+  <div class="eyebrow">What was built</div>
+  <h2>Four stages, one A10G</h2>
+  <div class="pipe">
+    <div class="stage"><div class="n">01</div><div>
+      <h3>Represent</h3>
+      <p>Each of 13,036 anime becomes a ~2,900-dimension vector: a frozen
+        Qwen3-Embedding-4B encoding of title, genres, themes, studio and
+        synopsis, concatenated with 256 ALS co-watch factors learned from
+        115.8M user interactions, plus metadata multi-hots.</p></div></div>
+    <div class="stage"><div class="n">02</div><div>
+      <h3>Retrieve</h3>
+      <p>A 3-to-9-seed two-tower ensemble — small MLPs trained with in-batch
+        sampled softmax on vote-weighted recommendation pairs — proposes 250
+        candidates, unioned with co-occurrence, content and graph neighbours.
+        This pool already contains 89–96% of the correct answers.</p></div></div>
+    <div class="stage"><div class="n">03</div><div>
+      <h3>Rank</h3>
+      <p>A LightGBM LambdaRank model orders the pool over 24 features,
+        trained five-fold-honest so no training query's features come from a
+        model that saw its edges. This stage is where the accuracy is won or
+        lost.</p></div></div>
+    <div class="stage"><div class="n">04</div><div>
+      <h3>Serve</h3>
+      <p>A CLI and an HTTP service with a mode switch that exposes all three
+        regimes above, so any recommendation can be inspected with the crowd
+        data switched off. Franchise filtering removes the query's own
+        sequels.</p></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">The research finding</div>
+  <h2>Seven paradigms, one ceiling</h2>
+  <p>With crowd data about the query removed, accuracy sits near 0.50 no matter
+    what is tried. Each bar is a distinct modelling paradigm, measured on the
+    same held-out development set after a literature survey of ~35 recent
+    papers.</p>
+
+  <div class="ladder">
+    <div class="rung best"><div>Frozen 4B features + GBDT</div>
+      <div class="bar"><span style="width:50.4%"></span></div>
+      <div class="val">0.504</div></div>
+    <div class="rung"><div>Fine-tuned contrastive encoder</div>
+      <div class="bar"><span style="width:50.0%"></span></div>
+      <div class="val">0.500</div></div>
+    <div class="rung"><div>Rationale-bridged encoder</div>
+      <div class="bar"><span style="width:49.3%"></span></div>
+      <div class="val">0.493</div></div>
+    <div class="rung"><div>Cross-candidate set transformer</div>
+      <div class="bar"><span style="width:45.9%"></span></div>
+      <div class="val">0.459</div></div>
+    <div class="rung"><div>Structural link-prediction teacher</div>
+      <div class="bar"><span style="width:27.5%"></span></div>
+      <div class="val">0.275</div></div>
+    <div class="rung"><div>Supervised LLM ranker (QLoRA)</div>
+      <div class="bar"><span style="width:25.5%"></span></div>
+      <div class="val">0.255</div></div>
+  </div>
+
+  <div class="callout">
+    <h3>Why the ceiling is real</h3>
+    <p>The candidate pool holds 89% of the correct answers, and a perfect
+      ordering of that same pool would score 0.996. So the barrier is not
+      retrieval, representation, or model capacity — it is that
+      <strong>which ten of thirty equally plausible anime a community
+      canonised is social and historical information</strong>, not a property
+      of the shows. Code Geass became <em>the</em> Death Note recommendation in
+      2008 and self-reinforced; nothing in a synopsis or a watch history
+      distinguishes it from ten equally apt thrillers.</p>
+    <p>Two things move the number, and both are the same move: import an
+      answer. Adding AniList's independent community graph lifted the strict
+      regime from 0.508 to 0.776. Adding the crowd's own list reaches 0.836
+      and beyond.</p>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Evidence base</div>
+  <h2>Data assembled</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Source</th><th>Scale</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>MAL recommendation graph</td><td class="num">91,249 edges</td>
+        <td>Supervision and ground truth</td></tr>
+      <tr><td>AniList recommendation graph</td><td class="num">6,937 anime</td>
+        <td>Independent second crowd</td></tr>
+      <tr><td>User watch histories</td><td class="num">115.8M interactions</td>
+        <td>Co-watch behaviour, 341k users</td></tr>
+      <tr><td>Community reviews</td><td class="num">3,964 anime</td>
+        <td>Full-arc text beyond synopses</td></tr>
+      <tr><td>Per-episode summaries</td><td class="num">1,423 anime</td>
+        <td>Mid-series plot turns</td></tr>
+      <tr><td>Staff and studio credits</td><td class="num">7,504 anime</td>
+        <td>Creator-level affinity</td></tr>
+      <tr><td>Pairing explanations</td><td class="num">87,790 texts</td>
+        <td>Why the crowd paired two shows</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="v">58</div><div class="k">experiments logged</div></div>
+    <div class="stat"><div class="v">11</div><div class="k">held-out evaluations</div></div>
+    <div class="stat"><div class="v">13,036</div><div class="k">anime in catalogue</div></div>
+    <div class="stat"><div class="v">12</div><div class="k">tests passing</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Open</div>
+  <h2>What remains</h2>
+  <ul>
+    <li>The goal is met under the held-out-query protocol; a decision to judge
+      it under the strict protocol instead would leave it 0.024 short, and the
+      bare protocol is capped near 0.50 on the evidence above.</li>
+    <li>Modelling work is closed. Every remaining idea from the literature
+      survey was tested or eliminated at a pre-registered gate.</li>
+    <li>Product work continues: catalogue coverage beyond 13,036 titles, and a
+      permanent address for the demo in place of an ephemeral tunnel.</li>
+  </ul>
+</section>
+
+<hr class="rule">
+<footer>Full experiment log, research journal and source:
+  <a href="https://github.com/dlee6018/agent-anime-recommender">github.com/dlee6018/agent-anime-recommender</a>
+</footer>
+
+</div>
