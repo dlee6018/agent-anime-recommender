@@ -55,6 +55,23 @@ def test_resolve_typos_fuzzy():
         assert tt[resolve_title(q)] == want, q
 
 
+def test_resolve_compositional_nickname_plus_suffix():
+    """'<nickname> <season>' must resolve within the nickname's franchise —
+    fuzzy alone latched onto the shared suffix (aot season 2 -> BNHA S2)."""
+    tt = titles()
+    cases = {
+        "aot season 2": "Shingeki no Kyojin Season 2",
+        "aot season 3": "Shingeki no Kyojin Season 3",
+        "bnha season 3": "Boku no Hero Academia 3rd Season",
+        "jjk season 2": "Jujutsu Kaisen 2nd Season",
+        "code geass r2": "Code Geass: Hangyaku no Lelouch R2",
+        "oregairu zoku": ("Yahari Ore no Seishun Love Comedy wa "
+                          "Machigatteiru. Zoku"),
+    }
+    for q, want in cases.items():
+        assert tt[resolve_title(q)] == want, q
+
+
 def test_resolve_gibberish_rejected():
     assert resolve_title("fright night") is None
     assert resolve_title("zzz not an anime zzz") is None

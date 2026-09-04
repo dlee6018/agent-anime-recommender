@@ -71,6 +71,22 @@ def _squash(s: str) -> str:
     return "".join(c for c in s if c.isalnum())
 
 
+_SUFFIX_RE = __import__("re").compile(
+    r"(season|part|movie|ova|ona|special|final|cour|s)?\d*$")
+
+
+def _core(sq: str) -> str:
+    """Strip trailing season/part markers so fuzzy matching is decided by the
+    distinctive head ('bnhaseason3' vs 'nanohaseason3' must NOT match on the
+    shared suffix)."""
+    prev = None
+    out = sq
+    while out != prev and len(out) > 3:
+        prev = out
+        out = _SUFFIX_RE.sub("", out)
+    return out or sq
+
+
 @lru_cache(maxsize=1)
 def _t2i_nospace() -> dict[str, int]:
     """alphanumeric-only title index ('steins gate' -> Steins;Gate TV)."""
@@ -85,7 +101,7 @@ def _t2i_nospace() -> dict[str, int]:
     return out
 
 
-def resolve_title(query: str) -> int | None:
+def resolve_title(query: str, _depth: int = 0) -> int | None:
     """Exact normalized match, then space-insensitive, then substring
     (most popular wins). An obscure exact match loses to a far more popular
     space-insensitive/substring match ('deathnote' must not resolve to the
@@ -115,13 +131,25 @@ def resolve_title(query: str) -> int | None:
         from rapidfuzz import fuzz, process
     except ImportError:
         return None
+    # compositional: "<nickname> <suffix>" — resolve the head, then pick the
+    # franchise member matching the tail ("aot season 2", "oregairu zoku").
+    # Runs BEFORE fuzzy: fuzzy latches onto the common suffix and ignores the
+    # distinctive head (bug: "aot season 2" -> BNHA 2nd Season).
+    comp = (_resolve_compositional(q, t2i, meta, pop, _depth)
+            if _depth == 0 else None)
+    if comp is not None:
+        return comp
+
     t2i = _t2i_nospace()
     qs = _squash(q)
     if len(qs) < 6:
         return None
     cand: dict[int, float] = {}
+    qcore = _core(qs)
     for key, score, _ in process.extract(qs, t2i.keys(), scorer=fuzz.ratio,
                                          score_cutoff=83, limit=10):
+        if fuzz.ratio(qcore, _core(key)) < 78:
+            continue  # match driven by a shared season suffix, not identity
         a = t2i[key]
         cand[a] = max(cand.get(a, 0), score)
     if len(qs) >= 8:
@@ -141,6 +169,70 @@ def resolve_title(query: str) -> int | None:
         return None
     best = max(cand.values())
     return min((a for a, sc in cand.items() if sc >= best - 5), key=pop)
+
+
+def _resolve_compositional(q, t2i, meta, pop, _depth=0):
+    """Split the query into head (an anime) + tail (a season/part modifier)
+    and search the head's franchise for the member matching the tail."""
+    try:
+        from rapidfuzz import fuzz
+    except ImportError:
+        return None
+    toks = q.split()
+    if len(toks) < 2:
+        return None
+    ns = _t2i_nospace()
+
+    def best_for(base, tail):
+        """Best franchise member of `base` matching the modifier `tail`."""
+        base_norm = norm_title(meta[base]["name"])
+        prefix = _squash(base_norm)[:18]
+        if len(prefix) < 6:
+            return None, 0
+        best, best_sc = None, 0
+        ts = _squash(tail)
+        td = "".join(c for c in tail if c.isdigit())
+        for t, aid in ns.items():
+            if not t.startswith(prefix) or aid == base:
+                continue
+            residual = t[len(prefix):]
+            if not residual:
+                continue
+            sc = fuzz.partial_ratio(ts, residual)
+            rd = "".join(c for c in residual if c.isdigit())
+            if td and td == rd:
+                sc += 25          # "season 3" == "3rd season"
+            elif td and rd and td != rd:
+                sc -= 40          # wrong season number
+            sc -= min(max(len(residual) - len(ts), 0), 20) * 0.5
+            if sc > best_sc:
+                best, best_sc = aid, sc
+        return best, best_sc
+
+    # pass 1: heads that resolve EXACTLY (a real title/synonym) — preferred,
+    # shortest head first so "aot season 2" splits as aot | season 2
+    # pass 2: only if pass 1 finds nothing, allow a fuzzy-resolved head
+    for use_fuzzy_head in (False, True):
+        if use_fuzzy_head and _depth != 0:
+            break
+        cands = []
+        for i in range(1, len(toks)):
+            head, tail = " ".join(toks[:i]), " ".join(toks[i:])
+            if not _squash(tail):
+                continue
+            base = t2i.get(head) or ns.get(_squash(head))
+            if base is None:
+                if not use_fuzzy_head:
+                    continue
+                base = resolve_title(head, _depth=1)
+            if base is None:
+                continue
+            aid, sc = best_for(base, tail)
+            if aid is not None and sc >= 80:
+                cands.append((sc, i, aid))
+        if cands:
+            return max(cands, key=lambda c: (c[0], -c[1]))[2]
+    return None
 
 
 def year_of(aid: int) -> int | None:
