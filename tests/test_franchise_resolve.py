@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src.data import resolve_title, titles  # noqa: E402
+from src.data import nearest_servable, resolve_title, titles  # noqa: E402
 from src.franchise import same_franchise, with_franchise_filter  # noqa: E402
 
 DEATH_NOTE, CODE_GEASS, CG_R2 = 1535, 1575, 2904
@@ -79,3 +79,19 @@ def test_resolve_gibberish_rejected():
 
 def test_resolve_unknown():
     assert resolve_title("zzz not an anime zzz") is None
+
+
+def test_out_of_universe_falls_back_to_franchise():
+    """16k anime resolve but aren't in the model universe — they must fall
+    back to a servable franchise sibling, not return an empty list."""
+    aid = resolve_title("Xingchen Bian 6th Season")
+    assert aid is not None
+    use, substituted = nearest_servable(aid)
+    assert substituted and use is not None
+    assert titles()[use] == "Xingchen Bian"
+
+
+def test_in_universe_not_substituted():
+    aid = resolve_title("Death Note")
+    use, substituted = nearest_servable(aid)
+    assert use == aid and not substituted

@@ -15,7 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from src.data import load_metadata, resolve_title, titles  # noqa: E402
+from src.data import (load_metadata, nearest_servable,  # noqa: E402
+                      resolve_title, titles)
 from src.registry import get_model  # noqa: E402
 
 ap = argparse.ArgumentParser()
@@ -129,6 +130,9 @@ async function go(){
   if(d.error){document.getElementById('err').textContent=
     'could not find: '+(d.unknown||[]).join(', ');return}
   let h='<p class="hint">for: '+d.query.map(x=>x.title).join(' + ')+'</p>';
+  for(const s of (d.substituted||[])){h+='<p class="hint">'+s.asked+
+    ' is outside the model\\'s catalogue — showing results for '+s.using+
+    ' instead.</p>'}
   for(const rec of d.recommendations){
    h+='<div class="card"><span class="rank">'+rec.rank+'</span>'+
     (rec.image?'<img loading="lazy" src="'+rec.image+'">':'<img>')+
@@ -162,10 +166,19 @@ class Handler(BaseHTTPRequestHandler):
         k = min(int(qs.get("k", ["5"])[0]), 50)
         mode = qs.get("mode", ["bare"])[0]
         rec_fn = MODES.get(mode, MODES["bare"])
-        ids, unknown = [], []
+        ids, unknown, subbed = [], [], []
         for n in names:
             aid = resolve_title(n)
-            (ids.append(aid) if aid else unknown.append(n))
+            if not aid:
+                unknown.append(n)
+                continue
+            use, was_sub = nearest_servable(aid)
+            if use is None:
+                unknown.append(f"{TT.get(aid, n)} (outside model coverage)")
+                continue
+            if was_sub:
+                subbed.append({"asked": TT.get(aid), "using": TT.get(use)})
+            ids.append(use)
         if not ids:
             body = {"error": "no resolvable anime", "unknown": unknown}
             code = 400
@@ -176,6 +189,7 @@ class Handler(BaseHTTPRequestHandler):
                 "mode": mode,
                 "query": [{"mal_id": q, "title": TT.get(q)} for q in ids],
                 "unknown": unknown,
+                "substituted": subbed,
                 "recommendations": [
                     {"rank": i + 1, "mal_id": r, "title": TT.get(r),
                      "url": f"https://myanimelist.net/anime/{r}",

@@ -238,3 +238,27 @@ def _resolve_compositional(q, t2i, meta, pop, _depth=0):
 def year_of(aid: int) -> int | None:
     m = load_metadata().get(aid)
     return m["year"] if m else None
+
+
+@lru_cache(maxsize=1)
+def servable_ids() -> frozenset:
+    """Anime the models can actually score (the content-embedding universe).
+    Metadata covers ~29k anime; the model universe is the popular ~13k."""
+    import numpy as np
+    return frozenset(int(a) for a in
+                     np.load(DATA / "content_emb.npz")["ids"])
+
+
+def nearest_servable(aid: int) -> tuple[int | None, bool]:
+    """(id_to_use, substituted). Out-of-universe anime (long tail) fall back
+    to their most popular franchise sibling so the query answers instead of
+    returning an empty list."""
+    uni = servable_ids()
+    if aid in uni:
+        return aid, False
+    from .franchise import same_franchise
+    meta = load_metadata()
+    sibs = [b for b in uni if same_franchise(aid, b)]
+    if not sibs:
+        return None, False
+    return min(sibs, key=lambda b: meta[b]["popularity"] or 10**9), True

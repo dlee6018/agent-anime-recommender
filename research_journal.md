@@ -6,6 +6,18 @@ learned and what we might run. Newest entries first.
 
 ---
 
+## 2026-09-04f — Coverage gap closed (QA-found bug)
+
+Metadata covers 29,122 anime; the model universe is the popular 13,036.
+The 16,086 outside resolved fine but returned an EMPTY list with no error —
+a silent failure the metrics could never surface (eval/dev queries are all
+popular). Fixed: `nearest_servable()` substitutes the most popular servable
+franchise sibling and the response/UI say so explicitly ("X is outside the
+model's catalogue — showing results for Y instead"); if no sibling exists,
+an honest error replaces the empty list. Verified live: "Xingchen Bian 6th
+Season" -> Xingchen Bian -> Quanzhi Fashi / Wu Dong Qian Kun / Shen Yin
+Wangzuo (coherent donghua neighbourhood). 14 tests passing.
+
 ## 2026-09-04e — Product QA sweep (post-research)
 
 Systematic sweep, zero anomalies found:
