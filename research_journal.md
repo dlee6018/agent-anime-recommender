@@ -6,6 +6,17 @@ learned and what we might run. Newest entries first.
 
 ---
 
+## 2026-09-04b — First shortlist executions
+- Exp 53 (contrastive encoder fine-tune): NEUTRAL under bare (0.500 vs
+  0.504). Lesson: light fine-tuning of a 335M encoder loses to frozen-4B
+  representation quality; alignment isn't the bare constraint.
+- Counting gate: jaccard/cos_bin AUC .826/.827 vs in-model cooc_lift .817,
+  PMI .468 — two cheap features added (opt-in); sequential/HSTU/GPSD branch
+  KILLED per pre-registered gate (counting captures the signal).
+- Exp 54 (rationale-bridged encoder, 87.8k masked crowd explanations as
+  bridge pairs) training. Next gates queued: NCN teacher quality,
+  cross-candidate set-ranker.
+
 ## 2026-09-04 — SOTA survey results (6-lens parallel review, 16 agents, ~35 papers)
 
 Full structured findings: data/sota_survey.json. Verified shortlist (each

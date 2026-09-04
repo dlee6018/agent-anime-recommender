@@ -16,6 +16,7 @@ FEATS_BASE = ["tt_cos", "content_cos", "als_cos", "cooc_lift", "cooc_logcnt",
               "cand_score", "transfer_in", "nbr_out", "cand_has_graph",
               "cand_age", "rev_edge", "colist", "rev_fam"]
 FEATS_ANILIST = ["al_rec", "al_rev", "al_rank", "al_transfer"]
+FEATS_COUNT = ["jaccard", "cos_bin"]  # opt-in (use_count_feats)
 FEATS = FEATS_BASE + FEATS_ANILIST  # full set; rows() gates the al block
 
 SEASON_RE = re.compile(
@@ -24,7 +25,8 @@ ROMAN = {"ii": 2, "iii": 3, "iv": 4}
 
 
 class FeatureBuilder:
-    def __init__(self, ids: np.ndarray):
+    def __init__(self, ids: np.ndarray, use_count_feats: bool = False):
+        self.use_count_feats = use_count_feats
         self.ids = ids
         self.idx = {int(a): i for i, a in enumerate(ids)}
         self.meta = load_metadata()
@@ -220,6 +222,11 @@ class FeatureBuilder:
                 has_graph, float(2026 - (year_of(int(c_id)) or 2005)),
                 rev, colist, rev_fam,
             ]
+            if self.use_count_feats:
+                cq_, ci_ = max(self.cnt[crow], 1) if crow is not None else 1, \
+                    max(self.cnt[cj], 1) if cj is not None else 1
+                row += [con / (cq_ + ci_ - con + 1),
+                        con / (np.sqrt(cq_ * ci_) + 1)]
             if self.al_out:  # AniList features only when the graph is loaded
                 al_tin = 0.0
                 for s2, r2 in self.al_in.get(int(c_id), {}).items():

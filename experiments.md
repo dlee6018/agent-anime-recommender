@@ -72,6 +72,9 @@ W&B project: `anime-rec`.
 | 50 | 09-03 | al_transfer (AniList 2-hop) | tower-sim-weighted AniList in-edges | strict 0.760 / src 0.812 | — | — | — | below +0.008 gate (strict) / neutral (src) — no eval reads; champion unchanged |
 | 51 | 09-03 | fresh MAL-API co-watch (interim probe) | 7.5k rec-writer lists = 2.48M interactions | ALS-kNN 0.247 vs 0.213 old | — | — | — | 2024+ coverage 96% vs 1%; full 25k-user rebuild queued |
 | 52 | 09-03 | union co-watch rebuild | 2023 dump + 23.8k fresh 2026 lists = 341k users / 115.8M interactions; ALS-256 + cooc rebuilt | src 0.816 (=) / strict 0.764 (+0.007, sub-gate) | — | — | — | no eval reads (gate); union stack PROMOTED for serving (consistency + 2024-26 anime coverage); recorded eval numbers remain from pre-union stack |
+| 53 | 09-04 | end-to-end contrastive text encoder | bge-large + MNRL (in-batch negs) on rec-pair docs | bare 0.500 | — | — | — | neutral vs 0.504 — 335M tuned can't beat frozen 4B features; SOTA-survey-aligned attempt |
+| 54 | 09-04 | rationale-bridged encoder | + 87.8k masked explanation texts as MNRL bridge pairs | training | — | — | — | pending |
+| 55 | 09-04 | counting-feature gate | standalone AUC in bare pools: jaccard .826, cos_bin .827, cooc_lift .817, pmi .468 | — | — | — | — | +2 opt-in features; sequential/HSTU branch killed per gate |
 
 ### Reviewer #1 follow-ups (2026-08-30 evening)
 - Headline protocol reconciled to STRICT per spec (README updated); src-only
