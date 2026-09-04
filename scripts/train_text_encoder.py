@@ -64,12 +64,12 @@ from sentence_transformers import (InputExample, SentenceTransformer,  # noqa: E
 from torch.utils.data import DataLoader  # noqa: E402
 
 model = SentenceTransformer(args.base, device="cuda")
-model.max_seq_length = 384
+model.max_seq_length = 320
 data = [InputExample(texts=[a, b]) for a, b in rows]
-loader = DataLoader(data, shuffle=True, batch_size=24, drop_last=True)
+loader = DataLoader(data, shuffle=True, batch_size=16, drop_last=True)
 loss = losses.MultipleNegativesRankingLoss(model)
 model.fit(train_objectives=[(loader, loss)], epochs=args.epochs,
-          warmup_steps=500, show_progress_bar=True)
+          warmup_steps=500, show_progress_bar=True, use_amp=True)
 out = ROOT / args.out
 model.save(str(out))
 print("encoder saved", flush=True)
