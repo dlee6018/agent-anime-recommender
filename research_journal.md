@@ -6,6 +6,26 @@ learned and what we might run. Newest entries first.
 
 ---
 
+## 2026-09-04e — Product QA sweep (post-research)
+
+Systematic sweep, zero anomalies found:
+- 40 most-popular anime, src_only: 0 issues (no unresolvable, no short
+  lists, no duplicates, no query-in-own-recs, no Music/CM/PV junk types).
+- 12 long-tail anime (popularity rank 3,000-8,000): 0 issues.
+- Multi-anime blending is coherent: DeathNote+Monster -> Zankyou/Death
+  Parade/Darker than Black; K-On!+Lucky Star -> Bocchi/Hibike/Tamako;
+  SnK+Frieren -> Kabaneri/Vinland/Owari no Seraph (correctly mixes both
+  parents' neighborhoods rather than collapsing to one).
+- Bare mode qualitatively sane on old and new titles (Frieren, a 2023
+  show, returns Majo no Tabitabi / Fumetsu no Anata e via the union
+  co-watch data — the 2024-26 blind spot stays closed).
+
+Also fixed this cycle (found by QA, invisible to metrics): season-query
+resolution was silently wrong ("aot season 2" -> BNHA 2nd Season) because
+fuzzy matching latched onto shared season suffixes. Fixed with a
+suffix-stripped core guard + two-pass compositional resolution
+(nickname -> franchise -> season, ordinal-aware). 12 tests passing.
+
 ## 2026-09-04d — FINDING: the bare ceiling is real (~0.50-0.52)
 
 Exp 58 (supervised LLM listwise/pointwise ranker — the last literature-backed
